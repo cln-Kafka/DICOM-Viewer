@@ -76,6 +76,7 @@ class DicomViewerUI(object):
         #### File Menu Actions ####
         self.actionDocumentation = QtWidgets.QAction(MainWindow)
         self.actionDocumentation.setObjectName("acitonDocumentation")
+        self.menuHelp.addAction(self.actionDocumentation)
 
     def setup_status_bar(self, MainWindow):
         self.statusbar = QtWidgets.QStatusBar(MainWindow)

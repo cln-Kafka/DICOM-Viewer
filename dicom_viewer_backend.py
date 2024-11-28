@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QAction, QApplication, QFileDialog, QMainWindow, QMe
 from vtkmodules.util.numpy_support import numpy_to_vtk
 
 from dicom_viewer_ui import DicomViewerUI
+from no_rotation_interactor_style import NoRotationInteractorStyle
 
 
 class DicomViewerBackend(QMainWindow, DicomViewerUI):
@@ -21,6 +22,9 @@ class DicomViewerBackend(QMainWindow, DicomViewerUI):
         self.loaded_image_data = None
         # Dictionary to store paths and their types (e.g., "nii" or "series")
         self.loaded_paths_history = {}
+
+        # Set the custom interactor style for each viewer
+        self.set_interactor_style()
 
         # UI variable setup and connections
         self.init_ui_connections()
@@ -47,8 +51,6 @@ class DicomViewerBackend(QMainWindow, DicomViewerUI):
                 nii_image = nib.load(file_path)
                 # Extract the 3D array from the NIfTI file
                 self.loaded_image_data = nii_image.get_fdata()
-                print(f"Loaded NIfTI file: {file_path}")
-                print(f"Image shape: {self.loaded_image_data.shape}")
 
                 # Add path to history if not already present
                 if file_path not in self.loaded_paths_history:
@@ -76,8 +78,6 @@ class DicomViewerBackend(QMainWindow, DicomViewerUI):
                 self.loaded_paths_history[file_path] = "series"
                 self.update_file_menu_history()
 
-            print(f"Loaded DICOM series: {file_path}")
-
     def get_path(self, file_type):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open NIfTI File", "", file_type
@@ -89,18 +89,18 @@ class DicomViewerBackend(QMainWindow, DicomViewerUI):
             return
 
         # Axial view (z-axis)
-        axial_slice = self.loaded_image_data[self.loaded_image_data.shape[2] // 2, :, :]
+        axial_slice = self.loaded_image_data[:, :, self.loaded_image_data.shape[2] // 2]
         self.render_slice_in_vtk(self.ui.axial_viewer, axial_slice)
 
         # Sagittal view (x-axis)
         sagittal_slice = self.loaded_image_data[
-            :, self.loaded_image_data.shape[1] // 2, :
+            self.loaded_image_data.shape[2] // 2, :, :
         ]
         self.render_slice_in_vtk(self.ui.sagittal_viewer, sagittal_slice)
 
         # Coronal view (y-axis)
         coronal_slice = self.loaded_image_data[
-            :, :, self.loaded_image_data.shape[2] // 2
+            :, self.loaded_image_data.shape[1] // 2, :
         ]
         self.render_slice_in_vtk(self.ui.coronal_viewer, coronal_slice)
 
@@ -108,6 +108,9 @@ class DicomViewerBackend(QMainWindow, DicomViewerUI):
         """
         Renders a 2D slice in the specified VTK widget.
         """
+        # Rotate the slice data 90 degrees to the left
+        slice_data = np.rot90(slice_data, k=3)
+
         # Convert NumPy array to vtkImageData
         vtk_data = vtk.vtkImageData()
         vtk_data.SetDimensions(slice_data.shape[1], slice_data.shape[0], 1)
@@ -169,6 +172,21 @@ class DicomViewerBackend(QMainWindow, DicomViewerUI):
                 )
             )
             self.ui.menuFile.addAction(history_action)
+
+    def set_interactor_style(self):
+        # Create a custom interactor style instance
+        no_rotation_style = NoRotationInteractorStyle()
+
+        # Set the custom style for each VTK viewer
+        self.ui.axial_viewer.GetRenderWindow().GetInteractor().SetInteractorStyle(
+            no_rotation_style
+        )
+        self.ui.sagittal_viewer.GetRenderWindow().GetInteractor().SetInteractorStyle(
+            no_rotation_style
+        )
+        self.ui.coronal_viewer.GetRenderWindow().GetInteractor().SetInteractorStyle(
+            no_rotation_style
+        )
 
     def show_error_message(self, message):
         msg = QMessageBox()
