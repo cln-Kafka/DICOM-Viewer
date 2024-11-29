@@ -54,7 +54,7 @@ def create_volume_renderer(volume_data, spacing):
     min_intensity = np.min(volume_data)
     max_intensity = np.max(volume_data)
     # Bind the contrast adjustment functionality
-    render_interactor.AddObserver("KeyPressEvent", lambda obj, event: adjust_contrast(obj, volume_data, volume_property, color_transfer_function, opacity_transfer_function,min_intensity,max_intensity,render_window))
+    render_interactor.AddObserver("KeyPressEvent", lambda obj, event: adjust_contrast(obj, volume_data, volume_property, color_transfer_function, opacity_transfer_function,min_intensity,max_intensity,))
 
     return render_window, render_interactor
 
@@ -75,7 +75,7 @@ def adjust_contrast(interactor, volume_data, volume_property, color_transfer_fun
         volume_property.SetColor(color_transfer_function)
         volume_property.SetScalarOpacity(opacity_transfer_function)
         render_window.Render()  # Force update of the render window
-    elif key == 'left':
+    elif key == 'Left':
         # Decrease contrast (widen the intensity range)
         range_factor = 2
         min_intensity /= range_factor
