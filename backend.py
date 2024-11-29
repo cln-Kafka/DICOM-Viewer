@@ -1,6 +1,8 @@
+import webbrowser
+
 import numpy as np
 from PyQt5.QtWidgets import QFileDialog, QMainWindow, QMessageBox
-from pyqtgraph import ImageView
+from pyqtgraph import ImageView, ViewBox
 
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
@@ -37,6 +39,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             lambda: self.import_image("sample")
         )
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
+        self.ui.actionDocumentation.triggered.connect(self.open_docs)
 
         # Setup crosshairs
         self.setup_mouse_handlers()
@@ -74,7 +77,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 lambda pos, v=view, p=plane: self.on_mouse_moved(pos, v, p)
             )
 
-    def on_mouse_moved(self, pos, view, plane):
+    def on_mouse_moved(self, pos, view: ViewBox, plane):
         if view.sceneBoundingRect().contains(
             pos
         ):  # Check if the mouse is within the scene
@@ -96,6 +99,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             "sagittal": {"axial": y, "coronal": x},
             "coronal": {"axial": y, "sagittal": x},
         }
+
+        if self.loaded_image_data is None:
+            return
 
         for plane, idx in slice_indices[current_plane].items():
             self.image_processor.update_slice(plane, idx)
@@ -156,3 +162,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             viewer.close()
         # Explicitly accept the close event (optional)
         event.accept()
+
+    def open_docs(self):
+        webbrowser.open(
+            "https://github.com/hagersamir/DICOM-Viewer-Features/blob/main/README.md"
+        )
