@@ -1,8 +1,10 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+from utils.interactor_styles import NoRotationInteractorStyle
 
-class DicomViewerUI(object):
+
+class MainWindowUI(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("dicom_viewer_main_window")
         MainWindow.setWindowModality(QtCore.Qt.NonModal)
@@ -39,6 +41,20 @@ class DicomViewerUI(object):
         self.viewers_grid_layout.addWidget(self.axial_viewer, 0, 0)
         self.viewers_grid_layout.addWidget(self.sagittal_viewer, 0, 1)
         self.viewers_grid_layout.addWidget(self.coronal_viewer, 0, 2)
+
+        # Create a custom interactor style instance
+        no_rotation_style = NoRotationInteractorStyle()
+
+        # Set the custom style for each VTK viewer to disable the rotation
+        self.axial_viewer.GetRenderWindow().GetInteractor().SetInteractorStyle(
+            no_rotation_style
+        )
+        self.sagittal_viewer.GetRenderWindow().GetInteractor().SetInteractorStyle(
+            no_rotation_style
+        )
+        self.coronal_viewer.GetRenderWindow().GetInteractor().SetInteractorStyle(
+            no_rotation_style
+        )
 
     def setup_menu_bar(self, MainWindow):
         ## Menubar ##
