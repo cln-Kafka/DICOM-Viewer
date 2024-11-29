@@ -36,7 +36,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             lambda: self.import_image("series")
         )
         self.ui.actionImport_Sample_Image.triggered.connect(
-            lambda: self.import_image("sample")
+            lambda: self.import_image(
+                "nii", "assets/data/nifti/subject-01-flanker.nii.gz"
+            )
         )
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
         self.ui.actionDocumentation.triggered.connect(self.open_docs)
@@ -58,6 +60,26 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
                 # Add to file history
                 self.file_history_manager.add_to_history(file_path, image_type)
+
+                # Display views
+                self.display_views()
+
+            elif image_type == "series":
+                directory = file_path or QFileDialog.getExistingDirectory(
+                    self, "Select DICOM Directory"
+                )
+                if not directory:
+                    return
+
+                self.loaded_image_data, _ = self.image_loader.load_dicom_series(
+                    directory
+                )
+
+                # Initialize image processor with loaded data
+                self.image_processor.set_image_data(self.loaded_image_data)
+
+                # Add to file history
+                self.file_history_manager.add_to_history(directory, image_type)
 
                 # Display views
                 self.display_views()

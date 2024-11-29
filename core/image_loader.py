@@ -1,4 +1,6 @@
 import nibabel as nib
+import SimpleITK as sitk
+from vtk.util import numpy_support
 
 
 class ImageLoader:
@@ -12,10 +14,18 @@ class ImageLoader:
 
     @staticmethod
     def load_dicom_series(directory):
-        # Future implementation for DICOM series loading
-        raise NotImplementedError("DICOM series loading not yet implemented")
+        try:
+            reader = sitk.ImageSeriesReader()
+            dicom_files = reader.GetGDCMSeriesFileNames(directory)
+            reader.SetFileNames(dicom_files)
+            image = reader.Execute()
+            return sitk.GetArrayFromImage(image), image.GetSpacing()
+        except Exception as e:
+            raise ValueError(f"Failed to load DICOM series: {e}")
 
     @staticmethod
-    def load_sample_image():
-        # Future implementation for loading sample images
-        raise NotImplementedError("Sample image loading not yet implemented")
+    def load_sample_image(file_path):
+        try:
+            return ImageLoader.load_nifti(file_path)
+        except Exception as e:
+            raise ValueError(f"Failed to load sample image: {e}")
