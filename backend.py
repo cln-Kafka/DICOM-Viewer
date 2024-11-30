@@ -2,10 +2,12 @@ import webbrowser
 
 import numpy as np
 from PyQt5.QtWidgets import QFileDialog, QMainWindow, QMessageBox
-from pyqtgraph import ImageView, ViewBox
+from pyqtgraph import ROI, ImageView, InfiniteLine, ViewBox
 
+from core.comparison_renderer import ComparisonRenderer
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
+from core.volume_renderer import VolumeRenderer
 from ui.main_window import MainWindowUI
 from utils.file_history_manager import FileHistoryManager
 
@@ -18,8 +20,12 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Initialize components
         self.loaded_image_data = None
+        self.spacing_info = None
         self.image_loader = ImageLoader()
         self.image_processor = ImageProcessor()
+
+        # UI Variables
+        self.crosshairs = {}
 
         # File history management
         self.file_history_manager = FileHistoryManager(
@@ -28,6 +34,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Connect UI actions
         self.init_ui_connections()
+
+        # Setup crosshairs
+        self.setup_crosshairs()
 
     def init_ui_connections(self):
         # File Menu
@@ -43,11 +52,12 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
 
         # View Menu
-        self.ui.actionRuler.triggered.connect(self.ruler)
+        self.ui.actionRuler.triggered.connect(lambda: self.ruler(self.ui.axial_viewer))
         self.ui.actionAngle.triggered.connect(self.angle)
 
         # Image Menu
         self.ui.actionBuild_Surface.triggered.connect(self.build_surface)
+        self.ui.actionComparison_Mode.triggered.connect(self.comparison_mode)
 
         # Help Menu
         self.ui.actionDocumentation.triggered.connect(self.open_docs)
@@ -59,7 +69,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 if not file_path:
                     return
 
-                self.loaded_image_data = self.image_loader.load_nifti(file_path)
+                self.loaded_image_data, self.spacing_info = (
+                    self.image_loader.load_nifti(file_path)
+                )
 
                 # Initialize image processor with loaded data
                 self.image_processor.set_image_data(self.loaded_image_data)
@@ -77,8 +89,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 if not directory:
                     return
 
-                self.loaded_image_data, _ = self.image_loader.load_dicom_series(
-                    directory
+                self.loaded_image_data, self.spacing_info = (
+                    self.image_loader.load_dicom_series(directory)
                 )
 
                 # Initialize image processor with loaded data
@@ -99,59 +111,16 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         )
         return file_path
 
-    # def setup_mouse_handlers(self):
-    #     views = {
-    #         "axial": self.ui.axial_viewer.getView(),
-    #         "sagittal": self.ui.sagittal_viewer.getView(),
-    #         "coronal": self.ui.coronal_viewer.getView(),
-    #     }
-
-    #     for plane, view in views.items():
-    #         view.scene().sigMouseMoved.connect(
-    #             lambda pos, v=view, p=plane: self.on_mouse_moved(pos, v, p)
-    #         )
-
-    # def on_mouse_moved(self, pos, view: ViewBox, plane):
-    #     if view.sceneBoundingRect().contains(
-    #         pos
-    #     ):  # Check if the mouse is within the scene
-    #         mouse_point = view.mapSceneToView(
-    #             pos
-    #         )  # Map the scene position to the view's coordinates
-    #         x, y = int(mouse_point.x()), int(mouse_point.y())  # Get integer coordinates
-
-    #         # Update crosshair positions
-    #         self.ui.crosshairs[plane]["h_line"].setPos(y)
-    #         self.ui.crosshairs[plane]["v_line"].setPos(x)
-
-    #         # Update slices based on current plane
-    #         self.update_slices_from_crosshair(plane, x, y)
-
-    # def update_slices_from_crosshair(self, current_plane, x, y):
-    #     slice_indices = {
-    #         "axial": {"sagittal": y, "coronal": x},
-    #         "sagittal": {"axial": y, "coronal": x},
-    #         "coronal": {"axial": y, "sagittal": x},
-    #     }
-
-    #     if self.loaded_image_data is None:
-    #         return
-
-    #     for plane, idx in slice_indices[current_plane].items():
-    #         self.image_processor.update_slice(plane, idx)
-    #         slice_data = self.image_processor.get_slice(plane)
-    #         self.render_slice(getattr(self.ui, f"{plane}_viewer"), slice_data)
-
     def render_slice(self, image_view: ImageView, slice_data):
         """
         Renders a 2D slice in the given PyQtGraph ImageView.
         """
         # Rotate the image 90 degrees counterclockwise (to the left)
-        rotated_slice = np.rot90(slice_data, k=2)
+        rotated_slice = np.rot90(slice_data, k=-1)
 
         image_view.setImage(
             rotated_slice,
-            # autoRange=True,
+            autoRange=True,
             autoLevels=True,
             autoHistogramRange=False,
         )
@@ -170,27 +139,105 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             slice_data = self.image_processor.get_slice(plane)
             self.render_slice(widget, slice_data)
 
-            # get the X and Y ranges based on the image dimensions
-            x_range = (0, slice_data.shape[1])
-            y_range = (0, slice_data.shape[0])
+            # Get width and height of the slice
+            width, height = slice_data.shape
+
+            # Calculate the center of the image
+            x_center = width / 2
+            y_center = height / 2
+
             # Set the X and Y limits for the view
-            widget.getView().setXRange(*x_range, padding=0)
-            widget.getView().setYRange(*y_range, padding=0)
+            widget.getView().setXRange(0, width, padding=0)
+            widget.getView().setYRange(0, height, padding=0)
             # widget.getView().setLimits(
-            #     xMin=x_range[0],
-            #     xMax=x_range[1],
-            #     yMin=y_range[0],
-            #     yMax=y_range[1],
+            #     xMin=0,
+            #     xMax=width,
+            #     yMin=0,
+            #     yMax=height,
             # )
 
-    def ruler(self):
-        pass
+            # Center the view on the image
+            widget.getView().setRange(
+                xRange=(x_center - width / 2, x_center + width / 2),
+                yRange=(y_center - height / 2, y_center + height / 2),
+                padding=0,
+            )
+
+    def ruler(self, viewer: ImageView):
+        viewer.addItem(ROI(viewer, [0, 0], [1, 1]))
+        # viewer.ui.roiBtn.click()
 
     def angle(self):
         pass
 
     def build_surface(self):
-        pass
+        self.volume_renderer = VolumeRenderer()
+        render_window, render_ineractor, _ = (
+            self.volume_renderer.create_volume_renderer(
+                self.loaded_image_data,
+                self.spacing_info,
+            )
+        )
+        render_window.Render()
+        render_ineractor.Start()
+
+    def comparison_mode(self):
+        data_1_path = self.get_path("NIfTI Files (*.nii *.nii.gz)")
+        data_2_path = self.get_path("NIfTI Files (*.nii *.nii.gz)")
+
+        if not data_1_path or not data_2_path:
+            return
+
+        data_1, spacing_1 = self.image_loader.load_nifti(data_1_path)
+        data_2, spacing_2 = self.image_loader.load_nifti(data_2_path)
+
+        self.comparison_renderer = ComparisonRenderer()
+        render_window, render_interactor = (
+            self.comparison_renderer.create_comparison_mode_renderer(
+                data_1, data_2, spacing_1, spacing_2
+            )
+        )
+
+        render_window.Render()
+        render_interactor.Start()
+
+    def setup_crosshairs(self):
+        views = {
+            "axial": self.ui.axial_viewer.getView(),
+            "sagittal": self.ui.sagittal_viewer.getView(),
+            "coronal": self.ui.coronal_viewer.getView(),
+        }
+
+        for plane, view in views.items():
+            h_line = InfiniteLine(angle=0, movable=False, pen="b")
+            v_line = InfiniteLine(angle=90, movable=False, pen="b")
+            view.addItem(h_line)
+            view.addItem(v_line)
+            self.crosshairs[plane] = {
+                "h_line": h_line,
+                "v_line": v_line,
+            }
+
+        # Connect the crosshairs to the update_crosshairs function
+        for plane, view in views.items():
+            h_line = self.crosshairs[plane]["h_line"]
+            v_line = self.crosshairs[plane]["v_line"]
+            self.update_crosshairs(view, h_line, v_line)
+
+    def update_crosshairs(
+        self,
+        view: ViewBox,
+        h_line: InfiniteLine,
+        v_line: InfiniteLine,
+    ):
+        # Get the range of the view
+        x_range, y_range = view.viewRange()
+        # Calculate the center of the range
+        x_center = (x_range[0] + x_range[1]) / 2
+        y_center = (y_range[0] + y_range[1]) / 2
+        # Set the position of the crosshairs to the center
+        h_line.setPos(y_center)
+        v_line.setPos(x_center)
 
     def show_error_message(self, message):
         msg = QMessageBox()

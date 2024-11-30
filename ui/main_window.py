@@ -25,9 +25,6 @@ class MainWindowUI(object):
         self.main_layout.setObjectName("main_layout")
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Variables
-        self.crosshairs = {}
-
         self.setup_viewers()
         self.setup_tools()
         self.setup_toolbars(MainWindow)
@@ -66,8 +63,6 @@ class MainWindowUI(object):
         self.setup_image_viewer(self.sagittal_viewer)
         self.setup_image_viewer(self.coronal_viewer)
 
-        self.setup_crosshairs()
-
     def sync_viewers(self):
         self.axial_viewer.getView().setXLink(self.sagittal_viewer.getView())
         self.axial_viewer.getView().setYLink(self.coronal_viewer.getView())
@@ -86,35 +81,6 @@ class MainWindowUI(object):
         viewer.ui.roiBtn.hide()  # Hide ROI button
         viewer.ui.menuBtn.hide()  # Hide menu button
         viewer.getView().setAspectLocked(True)  # Lock aspect ratio
-
-    def setup_crosshairs(self):
-        views = {
-            "axial": self.axial_viewer.getView(),
-            "sagittal": self.sagittal_viewer.getView(),
-            "coronal": self.coronal_viewer.getView(),
-        }
-
-        for plane, view in views.items():
-            h_line = InfiniteLine(angle=0, movable=False, pen="b")
-            v_line = InfiniteLine(angle=90, movable=False, pen="b")
-            view.addItem(h_line)
-            view.addItem(v_line)
-            self.crosshairs[plane] = {"h_line": h_line, "v_line": v_line}
-
-            # Connect to the view's sigRangeChanged signal to update crosshair positions
-            view.sigRangeChanged.connect(
-                lambda: self.update_crosshairs(view, h_line, v_line)
-            )
-
-    def update_crosshairs(self, view, h_line, v_line):
-        # Get the range of the view
-        x_range, y_range = view.viewRange()
-        # Calculate the center of the range
-        x_center = (x_range[0] + x_range[1]) / 2
-        y_center = (y_range[0] + y_range[1]) / 2
-        # Set the position of the crosshairs to the center
-        h_line.setPos(y_center)
-        v_line.setPos(x_center)
 
     def setup_tools(self):
         # Main tools layout (already exists)
@@ -349,4 +315,5 @@ class MainWindowUI(object):
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
         self.actionAngle.setText(_translate("MainWindow", "Angle"))
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
+        self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))

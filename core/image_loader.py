@@ -7,8 +7,8 @@ class ImageLoader:
     @staticmethod
     def load_nifti(file_path):
         try:
-            nii_image = nib.load(file_path)
-            return nii_image.get_fdata()
+            image = sitk.ReadImage(file_path)
+            return sitk.GetArrayFromImage(image), image.GetSpacing()
         except Exception as e:
             raise ValueError(f"Failed to load NIfTI file: {e}")
 
