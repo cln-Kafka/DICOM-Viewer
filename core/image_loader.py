@@ -1,6 +1,6 @@
 import nibabel as nib
 import SimpleITK as sitk
-from vtk.util import numpy_support
+from vtkmodules.util import numpy_support
 
 
 class ImageLoader:

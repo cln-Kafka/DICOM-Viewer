@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pyqtgraph import ImageView, InfiniteLine
+from pyqtgraph import HistogramLUTItem, ImageView, InfiniteLine
 
 
 class MainWindowUI(object):
@@ -59,12 +59,7 @@ class MainWindowUI(object):
         self.ortho_view_layout.addWidget(self.coronal_viewer, 0, 2)
 
         # Sync the viewers
-        self.axial_viewer.getView().setXLink(self.sagittal_viewer.getView())
-        self.axial_viewer.getView().setYLink(self.coronal_viewer.getView())
-        self.sagittal_viewer.getView().setXLink(self.axial_viewer.getView())
-        self.sagittal_viewer.getView().setYLink(self.coronal_viewer.getView())
-        self.coronal_viewer.getView().setXLink(self.axial_viewer.getView())
-        self.coronal_viewer.getView().setYLink(self.sagittal_viewer.getView())
+        # self.sync_viewers()
 
         # Customize initial settings if needed
         self.setup_image_viewer(self.axial_viewer)
@@ -73,13 +68,21 @@ class MainWindowUI(object):
 
         self.setup_crosshairs()
 
+    def sync_viewers(self):
+        self.axial_viewer.getView().setXLink(self.sagittal_viewer.getView())
+        self.axial_viewer.getView().setYLink(self.coronal_viewer.getView())
+        self.sagittal_viewer.getView().setXLink(self.axial_viewer.getView())
+        self.sagittal_viewer.getView().setYLink(self.coronal_viewer.getView())
+        self.coronal_viewer.getView().setXLink(self.axial_viewer.getView())
+        self.coronal_viewer.getView().setYLink(self.sagittal_viewer.getView())
+
     def setup_image_viewer(self, viewer: ImageView):
         """
         Configure default settings for a PyQtGraph ImageView.
 
         :param viewer: Instance of pyqtgraph.ImageView to configure.
         """
-        viewer.ui.histogram.hide()  # Hide histogram for simplicity (optional)
+        # viewer.ui.histogram.hide()  # Hide histogram for simplicity (optional)
         viewer.ui.roiBtn.hide()  # Hide ROI button
         viewer.ui.menuBtn.hide()  # Hide menu button
         viewer.getView().setAspectLocked(True)  # Lock aspect ratio
@@ -97,6 +100,21 @@ class MainWindowUI(object):
             view.addItem(h_line)
             view.addItem(v_line)
             self.crosshairs[plane] = {"h_line": h_line, "v_line": v_line}
+
+            # Connect to the view's sigRangeChanged signal to update crosshair positions
+            view.sigRangeChanged.connect(
+                lambda: self.update_crosshairs(view, h_line, v_line)
+            )
+
+    def update_crosshairs(self, view, h_line, v_line):
+        # Get the range of the view
+        x_range, y_range = view.viewRange()
+        # Calculate the center of the range
+        x_center = (x_range[0] + x_range[1]) / 2
+        y_center = (y_range[0] + y_range[1]) / 2
+        # Set the position of the crosshairs to the center
+        h_line.setPos(y_center)
+        v_line.setPos(x_center)
 
     def setup_tools(self):
         # Main tools layout (already exists)
@@ -148,7 +166,7 @@ class MainWindowUI(object):
         self.location_layout.setObjectName("location_layout")
 
         # Coordinates section
-        self.coord_label = QtWidgets.QLabel("Coordinates:")
+        self.coord_label = QtWidgets.QLabel("Coordinates")
         self.location_layout.addWidget(self.coord_label)
 
         self.coord_grid_layout = QtWidgets.QGridLayout()
@@ -293,6 +311,9 @@ class MainWindowUI(object):
         self.actionBuild_Surface = QtWidgets.QAction(MainWindow)
         self.actionBuild_Surface.setObjectName("actionBuild_Surface")
         self.menuImage.addAction(self.actionBuild_Surface)
+        self.actionComparison_Mode = QtWidgets.QAction(MainWindow)
+        self.actionComparison_Mode.setObjectName("actionComparison_Mode")
+        self.menuImage.addAction(self.actionComparison_Mode)
 
         ### Help Menu ###
         self.menuHelp = QtWidgets.QMenu(self.menubar)

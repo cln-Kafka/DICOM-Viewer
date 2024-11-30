@@ -30,7 +30,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.init_ui_connections()
 
     def init_ui_connections(self):
-        # Connect menu actions
+        # File Menu
         self.ui.actionImport_NIFTI.triggered.connect(lambda: self.import_image("nii"))
         self.ui.actionImport_DICOM_Series.triggered.connect(
             lambda: self.import_image("series")
@@ -41,10 +41,16 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             )
         )
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
-        self.ui.actionDocumentation.triggered.connect(self.open_docs)
 
-        # Setup crosshairs
-        self.setup_mouse_handlers()
+        # View Menu
+        self.ui.actionRuler.triggered.connect(self.ruler)
+        self.ui.actionAngle.triggered.connect(self.angle)
+
+        # Image Menu
+        self.ui.actionBuild_Surface.triggered.connect(self.build_surface)
+
+        # Help Menu
+        self.ui.actionDocumentation.triggered.connect(self.open_docs)
 
     def import_image(self, image_type, file_path=None):
         try:
@@ -87,63 +93,68 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         except Exception as e:
             self.show_error_message(str(e))
 
-    def setup_mouse_handlers(self):
-        views = {
-            "axial": self.ui.axial_viewer.getView(),
-            "sagittal": self.ui.sagittal_viewer.getView(),
-            "coronal": self.ui.coronal_viewer.getView(),
-        }
+    def get_path(self, file_type):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open Image File", "", file_type
+        )
+        return file_path
 
-        for plane, view in views.items():
-            view.scene().sigMouseMoved.connect(
-                lambda pos, v=view, p=plane: self.on_mouse_moved(pos, v, p)
-            )
+    # def setup_mouse_handlers(self):
+    #     views = {
+    #         "axial": self.ui.axial_viewer.getView(),
+    #         "sagittal": self.ui.sagittal_viewer.getView(),
+    #         "coronal": self.ui.coronal_viewer.getView(),
+    #     }
 
-    def on_mouse_moved(self, pos, view: ViewBox, plane):
-        if view.sceneBoundingRect().contains(
-            pos
-        ):  # Check if the mouse is within the scene
-            mouse_point = view.mapSceneToView(
-                pos
-            )  # Map the scene position to the view's coordinates
-            x, y = int(mouse_point.x()), int(mouse_point.y())  # Get integer coordinates
+    #     for plane, view in views.items():
+    #         view.scene().sigMouseMoved.connect(
+    #             lambda pos, v=view, p=plane: self.on_mouse_moved(pos, v, p)
+    #         )
 
-            # Update crosshair positions
-            self.ui.crosshairs[plane]["h_line"].setPos(y)
-            self.ui.crosshairs[plane]["v_line"].setPos(x)
+    # def on_mouse_moved(self, pos, view: ViewBox, plane):
+    #     if view.sceneBoundingRect().contains(
+    #         pos
+    #     ):  # Check if the mouse is within the scene
+    #         mouse_point = view.mapSceneToView(
+    #             pos
+    #         )  # Map the scene position to the view's coordinates
+    #         x, y = int(mouse_point.x()), int(mouse_point.y())  # Get integer coordinates
 
-            # Update slices based on current plane
-            self.update_slices_from_crosshair(plane, x, y)
+    #         # Update crosshair positions
+    #         self.ui.crosshairs[plane]["h_line"].setPos(y)
+    #         self.ui.crosshairs[plane]["v_line"].setPos(x)
 
-    def update_slices_from_crosshair(self, current_plane, x, y):
-        slice_indices = {
-            "axial": {"sagittal": y, "coronal": x},
-            "sagittal": {"axial": y, "coronal": x},
-            "coronal": {"axial": y, "sagittal": x},
-        }
+    #         # Update slices based on current plane
+    #         self.update_slices_from_crosshair(plane, x, y)
 
-        if self.loaded_image_data is None:
-            return
+    # def update_slices_from_crosshair(self, current_plane, x, y):
+    #     slice_indices = {
+    #         "axial": {"sagittal": y, "coronal": x},
+    #         "sagittal": {"axial": y, "coronal": x},
+    #         "coronal": {"axial": y, "sagittal": x},
+    #     }
 
-        for plane, idx in slice_indices[current_plane].items():
-            self.image_processor.update_slice(plane, idx)
-            slice_data = self.image_processor.get_slice(plane)
-            self.render_slice(getattr(self.ui, f"{plane}_viewer"), slice_data)
+    #     if self.loaded_image_data is None:
+    #         return
+
+    #     for plane, idx in slice_indices[current_plane].items():
+    #         self.image_processor.update_slice(plane, idx)
+    #         slice_data = self.image_processor.get_slice(plane)
+    #         self.render_slice(getattr(self.ui, f"{plane}_viewer"), slice_data)
 
     def render_slice(self, image_view: ImageView, slice_data):
         """
         Renders a 2D slice in the given PyQtGraph ImageView.
         """
         # Rotate the image 90 degrees counterclockwise (to the left)
-        rotated_slice = np.rot90(slice_data)
+        rotated_slice = np.rot90(slice_data, k=2)
 
-        image_view.setImage(rotated_slice.T, autoLevels=False, autoHistogramRange=False)
-
-    def get_path(self, file_type):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Image File", "", file_type
+        image_view.setImage(
+            rotated_slice,
+            # autoRange=True,
+            autoLevels=True,
+            autoHistogramRange=False,
         )
-        return file_path
 
     def display_views(self):
         if self.loaded_image_data is None:
@@ -159,11 +170,27 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             slice_data = self.image_processor.get_slice(plane)
             self.render_slice(widget, slice_data)
 
-            # Set the X and Y ranges based on the image dimensions
+            # get the X and Y ranges based on the image dimensions
             x_range = (0, slice_data.shape[1])
             y_range = (0, slice_data.shape[0])
+            # Set the X and Y limits for the view
             widget.getView().setXRange(*x_range, padding=0)
             widget.getView().setYRange(*y_range, padding=0)
+            # widget.getView().setLimits(
+            #     xMin=x_range[0],
+            #     xMax=x_range[1],
+            #     yMin=y_range[0],
+            #     yMax=y_range[1],
+            # )
+
+    def ruler(self):
+        pass
+
+    def angle(self):
+        pass
+
+    def build_surface(self):
+        pass
 
     def show_error_message(self, message):
         msg = QMessageBox()
