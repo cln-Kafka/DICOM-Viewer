@@ -4,10 +4,8 @@ from scipy.ndimage import convolve, gaussian_filter
 
 
 class ImageEnhancer:
-    def __init__(self):
-        self.image = None
-
     # WINDOWING
+    @staticmethod
     def apply_window(image, window_level=None, window_width=None):
         min_val = np.min(image)
         max_val = np.max(image)
@@ -30,9 +28,11 @@ class ImageEnhancer:
 
         return windowed_image
 
+    @staticmethod
     def smooth_image(image, sigma=1, strength=1.0):
         return gaussian_filter(image, sigma=sigma) * strength
 
+    @staticmethod
     def sharpen_image(image, strength=1.0):
         # Define the Laplacian kernel (3x3 in 3 channels)
         laplacian_kernel = np.array(
@@ -48,6 +48,7 @@ class ImageEnhancer:
 
         return sharpened_image
 
+    @staticmethod
     def reduce_noise(image, filter_type, size=3, sigma_color=0.05, sigma_spatial=15):
         """
         Parameters:
@@ -77,11 +78,13 @@ class ImageEnhancer:
 
         return filtered_image
 
+    @staticmethod
     def normalize_image(image):
         image = np.array(image, dtype=np.float32)
         normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
         return normalized_image
 
+    @staticmethod
     def high_pass_filter_cv(image, sigma=1.0, strength=1.0):
         # Apply Gaussian blur using OpenCV
         low_pass = cv2.GaussianBlur(image, (0, 0), sigma)

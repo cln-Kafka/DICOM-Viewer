@@ -5,10 +5,12 @@ from PyQt5.QtWidgets import QFileDialog, QMainWindow, QMessageBox
 from pyqtgraph import ROI, ImageView, InfiniteLine, ViewBox
 
 from core.comparison_renderer import ComparisonRenderer
+from core.image_enhancer import ImageEnhancer
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
 from core.volume_renderer import VolumeRenderer
 from ui.main_window import MainWindowUI
+from ui.windowing_parameters_dialog import WindowingDialogUI
 from utils.file_history_manager import FileHistoryManager
 
 
@@ -56,6 +58,11 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui.actionAngle.triggered.connect(self.angle)
 
         # Image Menu
+        self.ui.actionWindowing.triggered.connect(self.windowing)
+        self.ui.actionGuassian.triggered.connect(self.guassian_filter)
+        self.ui.actionLaplacian.triggered.connect(self.laplacian_filter)
+        self.ui.actionMedianFilter.triggered.connect(self.median_filter)
+        self.ui.actionBilateralFilter.triggered.connect(self.bilateral_filter)
         self.ui.actionBuild_Surface.triggered.connect(self.build_surface)
         self.ui.actionComparison_Mode.triggered.connect(self.comparison_mode)
 
@@ -263,3 +270,30 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         webbrowser.open(
             "https://github.com/hagersamir/DICOM-Viewer-Features/blob/main/README.md"
         )
+
+    def windowing(self):
+        self.image_enhancer = ImageEnhancer()
+        window_level, window_width = self.get_windowing_parameters()
+        self.loaded_image_data = self.image_enhancer.apply_window(
+            self.loaded_image_data, window_level, window_width
+        )
+        self.display_views()
+
+    def get_windowing_parameters(self):
+        dialog = WindowingDialogUI()
+        dialog.exec_()
+        window_level = dialog.windowLevelDoubleSpinBox.value()
+        window_width = dialog.windowWidthDoubleSpinBox.value()
+        return window_level, window_width
+
+    def guassian_filter(self):
+        pass
+
+    def laplacian_filter(self):
+        pass
+
+    def median_filter(self):
+        pass
+
+    def bilateral_filter(self):
+        pass

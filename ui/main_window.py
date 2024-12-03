@@ -1,20 +1,18 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pyqtgraph import HistogramLUTItem, ImageView, InfiniteLine
+from pyqtgraph import ImageView
 
 
 class MainWindowUI(object):
     def setupUi(self, MainWindow: QtWidgets.QMainWindow):
         MainWindow.setObjectName("dicom_viewer_main_window")
+        # Not to block interactions with other windows of the app
         MainWindow.setWindowModality(QtCore.Qt.NonModal)
         MainWindow.setEnabled(True)
         MainWindow.resize(1280, 720)
         MainWindow.setMinimumSize(QtCore.QSize(1280, 720))
-        MainWindow.setMaximumSize(QtCore.QSize(16777215, 16777213))
+        # Commented the maximum size to allow resizing
+        # MainWindow.setMaximumSize(QtCore.QSize(16777215, 16777213))
         MainWindow.setWindowIcon(QtGui.QIcon("assets/icons/logo.png"))
-        font = QtGui.QFont()
-        font.setFamily("Poppins")
-        font.setPointSize(9)
-        MainWindow.setFont(font)
         MainWindow.setMouseTracking(False)
         MainWindow.setAcceptDrops(True)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -34,7 +32,13 @@ class MainWindowUI(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-    from pyqtgraph import ImageView
+        # Apply the font to all widgets
+        self.apply_font_to_all_widgets(
+            QtGui.QFont(
+                "Poppins",
+                9,
+            ),
+        )
 
     def setup_viewers(self):
         # A layout to hold the viewer ports
@@ -328,6 +332,11 @@ class MainWindowUI(object):
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
+    def apply_font_to_all_widgets(self, font):
+        app = QtWidgets.QApplication.instance()
+        for widget in app.allWidgets():
+            widget.setFont(font)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

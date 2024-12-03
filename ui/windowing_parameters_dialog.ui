@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WindowingDialog</class>
+ <widget class="QDialog" name="WindowingDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>295</width>
+    <height>122</height>
+   </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>Poppins</family>
+    <pointsize>9</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>Windowing Parameters</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="controls_hlayout">
+     <item>
+      <layout class="QVBoxLayout" name="parametersLabels_vlayout">
+       <item>
+        <widget class="QLabel" name="windowLevel">
+         <property name="text">
+          <string>Window Level</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="windowWidth">
+         <property name="text">
+          <string>Window Width</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="parametersSpinBoxes_vlayout">
+       <item>
+        <widget class="QDoubleSpinBox" name="windowLevelDoubleSpinBox"/>
+       </item>
+       <item>
+        <widget class="QDoubleSpinBox" name="windowWidthDoubleSpinBox"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="applyWindowingButton">
+       <property name="text">
+        <string>Apply</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
