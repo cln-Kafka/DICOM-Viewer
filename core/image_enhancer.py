@@ -4,7 +4,6 @@ from scipy.ndimage import convolve, gaussian_filter
 
 
 class ImageEnhancer:
-    # WINDOWING
     @staticmethod
     def apply_window(image, window_level=None, window_width=None):
         min_val = np.min(image)

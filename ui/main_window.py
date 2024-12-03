@@ -242,9 +242,11 @@ class MainWindowUI(object):
         self.menubar.addAction(self.menuFile.menuAction())
 
         #### File Menu Actions ####
+        self.actionImport_Image = QtWidgets.QAction(MainWindow)
+        self.actionImport_Image.setObjectName("actionImport_Image")
+        self.actionImport_Image.setShortcut("Ctrl+I")
         self.actionImport_NIFTI = QtWidgets.QAction(MainWindow)
         self.actionImport_NIFTI.setObjectName("actionImport_NIFTI")
-        self.actionImport_NIFTI.setShortcut("Ctrl+I")
         self.actionImport_Sample_Image = QtWidgets.QAction(MainWindow)
         self.actionImport_Sample_Image.setObjectName("actionImport_Sample_Image")
         self.actionImport_DICOM_Series = QtWidgets.QAction(MainWindow)
@@ -253,11 +255,12 @@ class MainWindowUI(object):
         self.actionQuit_App.setObjectName("actionQuit_App")
         self.actionQuit_App.setShortcut("Ctrl+Q")
 
+        self.menuFile.addAction(self.actionImport_Image)
         self.menuFile.addAction(self.actionImport_NIFTI)
         self.menuFile.addAction(self.actionImport_Sample_Image)
         self.menuFile.addAction(self.actionImport_DICOM_Series)
-        self.menuFile.addAction(self.actionQuit_App)
         self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionQuit_App)
 
         ### View Menu ###
         self.menuView = QtWidgets.QMenu(self.menubar)
@@ -289,21 +292,17 @@ class MainWindowUI(object):
         )  # Correct method for adding a submenu
 
         # Filters actions
-        self.actionGuassian = QtWidgets.QAction(MainWindow)
-        self.actionGuassian.setObjectName("actionGuassian")
-        self.subMenuFilters.addAction(self.actionGuassian)
+        self.actionSmoothing = QtWidgets.QAction(MainWindow)
+        self.actionSmoothing.setObjectName("actionSmoothing")
+        self.subMenuFilters.addAction(self.actionSmoothing)
 
-        self.actionLaplacian = QtWidgets.QAction(MainWindow)
-        self.actionLaplacian.setObjectName("actionLaplacian")
-        self.subMenuFilters.addAction(self.actionLaplacian)
+        self.actionSharpening = QtWidgets.QAction(MainWindow)
+        self.actionSharpening.setObjectName("actionSharpening")
+        self.subMenuFilters.addAction(self.actionSharpening)
 
-        self.actionMedianFilter = QtWidgets.QAction(MainWindow)
-        self.actionMedianFilter.setObjectName("actionMedianFilter")
-        self.subMenuFilters.addAction(self.actionMedianFilter)
-
-        self.actionBilateralFilter = QtWidgets.QAction(MainWindow)
-        self.actionBilateralFilter.setObjectName("actionBilateralFilter")
-        self.subMenuFilters.addAction(self.actionBilateralFilter)
+        self.actionDenoising = QtWidgets.QAction(MainWindow)
+        self.actionDenoising.setObjectName("actionDenoising")
+        self.subMenuFilters.addAction(self.actionDenoising)
 
         # Add a separator between filters and other actions
         self.menuImage.addSeparator()
@@ -346,6 +345,7 @@ class MainWindowUI(object):
         self.menuImage.setTitle(_translate("MainWindow", "Image"))
         self.subMenuFilters.setTitle(_translate("MainWindow", "Filters"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
+        self.actionImport_Image.setText(_translate("MainWindow", "Import Image"))
         self.actionImport_NIFTI.setText(_translate("MainWindow", "Import NIFTI"))
         self.actionImport_Sample_Image.setText(
             _translate("MainWindow", "Import Sample Image")
@@ -357,18 +357,9 @@ class MainWindowUI(object):
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
         self.actionAngle.setText(_translate("MainWindow", "Angle"))
         self.actionWindowing.setText(_translate("MainWindow", "Windowing"))
-        self.actionGuassian.setText(
-            _translate("MainWindow", "Guassian (3x3) | Smoothing")
-        )
-        self.actionLaplacian.setText(
-            _translate("MainWindow", "Laplacian (3x3) | Sharpening")
-        )
-        self.actionMedianFilter.setText(
-            _translate("MainWindow", "Median Filter (3x3) | Denoising")
-        )
-        self.actionBilateralFilter.setText(
-            _translate("MainWindow", "Bilateral Filter (3x3) | Denoising")
-        )
+        self.actionSmoothing.setText(_translate("MainWindow", "Smoothing"))
+        self.actionSharpening.setText(_translate("MainWindow", "Sharpening"))
+        self.actionDenoising.setText(_translate("MainWindow", "Denoising"))
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
         self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))

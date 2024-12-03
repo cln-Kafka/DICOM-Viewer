@@ -1,7 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
-class WindowingDialogUI(QtWidgets.QDialog):  # Inherit from QDialog
+class WindowingDialogUI(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
@@ -9,6 +9,7 @@ class WindowingDialogUI(QtWidgets.QDialog):  # Inherit from QDialog
     def setupUi(self, WindowingDialog):
         WindowingDialog.setObjectName("WindowingDialog")
         WindowingDialog.resize(295, 122)
+        self.setWindowIcon(QtGui.QIcon("assets/icons/logo.png"))
         font = QtGui.QFont()
         font.setFamily("Poppins")
         font.setPointSize(9)
@@ -56,6 +57,7 @@ class WindowingDialogUI(QtWidgets.QDialog):  # Inherit from QDialog
         self.retranslateUi(WindowingDialog)
         QtCore.QMetaObject.connectSlotsByName(WindowingDialog)
 
+        # Connect the apply button to accept the dialog
         self.applyWindowingButton.clicked.connect(self.accept)
 
     def retranslateUi(self, WindowingDialog):

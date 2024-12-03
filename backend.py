@@ -1,7 +1,7 @@
 import webbrowser
 
 import numpy as np
-from PyQt5.QtWidgets import QFileDialog, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox
 from pyqtgraph import ROI, ImageView, InfiniteLine, ViewBox
 
 from core.comparison_renderer import ComparisonRenderer
@@ -9,7 +9,9 @@ from core.image_enhancer import ImageEnhancer
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
 from core.volume_renderer import VolumeRenderer
+from ui.denoising_dialog import DenoisingDialogUI
 from ui.main_window import MainWindowUI
+from ui.smoothing_sharpening_dialog import SmoothingAndSharpeningDialogUI
 from ui.windowing_parameters_dialog import WindowingDialogUI
 from utils.file_history_manager import FileHistoryManager
 
@@ -42,6 +44,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
     def init_ui_connections(self):
         # File Menu
+        self.ui.actionImport_Image.triggered.connect(lambda: self.import_image(None))
         self.ui.actionImport_NIFTI.triggered.connect(lambda: self.import_image("nii"))
         self.ui.actionImport_DICOM_Series.triggered.connect(
             lambda: self.import_image("series")
@@ -59,10 +62,13 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Image Menu
         self.ui.actionWindowing.triggered.connect(self.windowing)
-        self.ui.actionGuassian.triggered.connect(self.guassian_filter)
-        self.ui.actionLaplacian.triggered.connect(self.laplacian_filter)
-        self.ui.actionMedianFilter.triggered.connect(self.median_filter)
-        self.ui.actionBilateralFilter.triggered.connect(self.bilateral_filter)
+        self.ui.actionSmoothing.triggered.connect(
+            lambda: self.smoothing_and_sharpening("Smoothing")
+        )
+        self.ui.actionSharpening.triggered.connect(
+            lambda: self.smoothing_and_sharpening("Sharpening")
+        )
+        self.ui.actionDenoising.triggered.connect(self.denoising)
         self.ui.actionBuild_Surface.triggered.connect(self.build_surface)
         self.ui.actionComparison_Mode.triggered.connect(self.comparison_mode)
 
@@ -71,7 +77,26 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
     def import_image(self, image_type, file_path=None):
         try:
-            if image_type == "nii":
+            if image_type == None:
+                file_path = file_path or self.get_path(
+                    "All Files (*);;NIfTI Files (*.nii *.nii.gz);;DICOM Files (*.dcm)"
+                )
+                if not file_path:
+                    return
+                self.loaded_image_data, self.spacing_info = (
+                    self.image_loader.load_image(file_path)
+                )
+
+                # Initialize image processor with loaded data
+                self.image_processor.set_image_data(self.loaded_image_data)
+
+                # Add to file history
+                self.file_history_manager.add_to_history(file_path, image_type)
+
+                # Display views
+                self.display_views()
+
+            elif image_type == "nii":
                 file_path = file_path or self.get_path("NIfTI Files (*.nii *.nii.gz)")
                 if not file_path:
                     return
@@ -274,26 +299,65 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
     def windowing(self):
         self.image_enhancer = ImageEnhancer()
         window_level, window_width = self.get_windowing_parameters()
-        self.loaded_image_data = self.image_enhancer.apply_window(
-            self.loaded_image_data, window_level, window_width
-        )
-        self.display_views()
+
+        # Check if valid values were returned
+        if window_level is not None and window_width is not None:
+            self.loaded_image_data = self.image_enhancer.apply_window(
+                self.loaded_image_data, window_level, window_width
+            )
+            self.display_views()
 
     def get_windowing_parameters(self):
-        dialog = WindowingDialogUI()
-        dialog.exec_()
-        window_level = dialog.windowLevelDoubleSpinBox.value()
-        window_width = dialog.windowWidthDoubleSpinBox.value()
-        return window_level, window_width
+        windowing_dialog = WindowingDialogUI()
+        if windowing_dialog.exec_() == QDialog.accepted:
+            window_level = windowing_dialog.windowLevelDoubleSpinBox.value()
+            window_width = windowing_dialog.windowWidthDoubleSpinBox.value()
+            return window_level, window_width
+        return None, None  # Return None if dialog is rejected
 
-    def guassian_filter(self):
-        pass
+    def smoothing_and_sharpening(self, mode):
+        self.image_enhancer = ImageEnhancer()
+        if mode == "Smoothing":
+            sigma, strength = self.get_smoothing_parameters()
 
-    def laplacian_filter(self):
-        pass
+            if sigma is not None and strength is not None:
+                self.loaded_image_data = self.image_enhancer.smooth_image(
+                    self.loaded_image_data, sigma, strength
+                )
+                self.display_views()
 
-    def median_filter(self):
-        pass
+        elif mode == "Sharpening":
+            strength = self.get_sharpening_parameters()
+            if strength is not None:
+                self.loaded_image_data = self.image_enhancer.sharpen_image(
+                    self.loaded_image_data, strength
+                )
+                self.display_views()
 
-    def bilateral_filter(self):
+    def get_smoothing_parameters(self):
+        smoothing_dialog = SmoothingAndSharpeningDialogUI(mode="Smoothing")
+        if smoothing_dialog.exec_() == QDialog.accepted:
+            sigma = smoothing_dialog.sigma_spinbox.value()
+            smoothing_strength = smoothing_dialog.smoothing_strength_spinbox.value()
+            return sigma, smoothing_strength
+        return None, None
+
+    def get_sharpening_parameters(self):
+        sharpening_dialog = SmoothingAndSharpeningDialogUI(mode="Sharpening")
+        if sharpening_dialog.exec_() == QDialog.accepted:
+            sharpening_strength = sharpening_dialog.smoothing_strength_spinbox.value()
+            return sharpening_strength
+        return None
+
+    def denoising(self):
+        self.image_enhancer = ImageEnhancer()
+        self.show_denoising_parameters_dialog()
+
+    def show_denoising_parameters_dialog(self):
+        denoising_dialog = DenoisingDialogUI()
+
+        if denoising_dialog.exec_() == QDialog.Accepted:
+            pass
+
+    def show_denoising_parameters(self):
         pass
