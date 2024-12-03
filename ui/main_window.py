@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import HistogramLUTItem, ImageView, InfiniteLine
+from pyqtgraph import ImageView
 
 
 class MainWindowUI(object):
@@ -33,8 +34,6 @@ class MainWindowUI(object):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-    from pyqtgraph import ImageView
 
     def setup_viewers(self):
         # A layout to hold the viewer ports
@@ -267,6 +266,32 @@ class MainWindowUI(object):
         self.actionAngle = QtWidgets.QAction(MainWindow)
         self.actionAngle.setObjectName("actionAngle")
         self.menuView.addAction(self.actionAngle)
+        
+        ### Annotation Menu ###
+        self.menuAnnotations = QtWidgets.QMenu(self.menubar)
+        self.menuAnnotations.setObjectName("menuAnnotations")
+        self.menubar.addAction(self.menuAnnotations.menuAction())
+
+        #### Annotation Menu Actions ####
+        self.actionAdd_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionAdd_Text_Annotation.setObjectName("actionAdd_Text_Annotation")
+        self.menuAnnotations.addAction(self.actionAdd_Text_Annotation)
+
+        self.actionSave_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionSave_Text_Annotation.setObjectName("actionSave_Text_Annotation")
+        self.menuAnnotations.addAction(self.actionSave_Text_Annotation)
+
+        self.actionLoad_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionLoad_Text_Annotation.setObjectName("actionLoad_Text_Annotation")
+        self.menuAnnotations.addAction(self.actionLoad_Text_Annotation)
+
+        self.actionDelete_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionDelete_Text_Annotation.setObjectName("actionDelete_Text_Annotation")
+        self.menuAnnotations.addAction(self.actionDelete_Text_Annotation)
+
+        self.actionClear_Measurements = QtWidgets.QAction(MainWindow)  # Added action for clearing measurements
+        self.actionClear_Measurements.setObjectName("actionClear_Measurements")
+        self.menuAnnotations.addAction(self.actionClear_Measurements)
 
         ### Image Menu ###
         self.menuImage = QtWidgets.QMenu(self.menubar)
@@ -302,6 +327,7 @@ class MainWindowUI(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "Dicom Viewer"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuView.setTitle(_translate("MainWindow", "View"))
+        self.menuAnnotations.setTitle(_translate("MainWindow", "Annotations"))
         self.menuImage.setTitle(_translate("MainWindow", "Image"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
         self.actionImport_NIFTI.setText(_translate("MainWindow", "Import NIFTI"))
@@ -314,6 +340,12 @@ class MainWindowUI(object):
         self.actionQuit_App.setText(_translate("MainWindow", "Quit App"))
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
         self.actionAngle.setText(_translate("MainWindow", "Angle"))
+        # Add translations for new annotation actions
+        self.actionAdd_Text_Annotation.setText(_translate("MainWindow", "Add Text Annotation"))
+        self.actionSave_Text_Annotation.setText(_translate("MainWindow", "Save Annotations"))
+        self.actionLoad_Text_Annotation.setText(_translate("MainWindow", "Load Annotations"))
+        self.actionDelete_Text_Annotation.setText(_translate("MainWindow", "Delete Annotations"))
+        self.actionClear_Measurements.setText(_translate("MainWindow", "Clear Measurements"))
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
         self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))
