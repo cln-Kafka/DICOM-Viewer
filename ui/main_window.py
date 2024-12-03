@@ -274,9 +274,41 @@ class MainWindowUI(object):
         self.menubar.addAction(self.menuImage.menuAction())
 
         #### Image Menu Actions ####
+        self.actionWindowing = QtWidgets.QAction(MainWindow)
+        self.actionWindowing.setObjectName("actionWindowing")
+        self.menuImage.addAction(self.actionWindowing)
+        # Filters menu inside Image menu
+        self.subMenuFilters = QtWidgets.QMenu(self.menuImage)
+        self.subMenuFilters.setObjectName("subMenuFilters")
+        self.menuImage.addMenu(
+            self.subMenuFilters
+        )  # Correct method for adding a submenu
+
+        # Filters actions
+        self.actionGuassian = QtWidgets.QAction(MainWindow)
+        self.actionGuassian.setObjectName("actionGuassian")
+        self.subMenuFilters.addAction(self.actionGuassian)
+
+        self.actionLaplacian = QtWidgets.QAction(MainWindow)
+        self.actionLaplacian.setObjectName("actionLaplacian")
+        self.subMenuFilters.addAction(self.actionLaplacian)
+
+        self.actionMedianFilter = QtWidgets.QAction(MainWindow)
+        self.actionMedianFilter.setObjectName("actionMedianFilter")
+        self.subMenuFilters.addAction(self.actionMedianFilter)
+
+        self.actionBilateralFilter = QtWidgets.QAction(MainWindow)
+        self.actionBilateralFilter.setObjectName("actionBilateralFilter")
+        self.subMenuFilters.addAction(self.actionBilateralFilter)
+
+        # Add a separator between filters and other actions
+        self.menuImage.addSeparator()
+
+        # Additional actions inside the Image menu
         self.actionBuild_Surface = QtWidgets.QAction(MainWindow)
         self.actionBuild_Surface.setObjectName("actionBuild_Surface")
         self.menuImage.addAction(self.actionBuild_Surface)
+
         self.actionComparison_Mode = QtWidgets.QAction(MainWindow)
         self.actionComparison_Mode.setObjectName("actionComparison_Mode")
         self.menuImage.addAction(self.actionComparison_Mode)
@@ -303,6 +335,7 @@ class MainWindowUI(object):
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuView.setTitle(_translate("MainWindow", "View"))
         self.menuImage.setTitle(_translate("MainWindow", "Image"))
+        self.subMenuFilters.setTitle(_translate("MainWindow", "Filters"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
         self.actionImport_NIFTI.setText(_translate("MainWindow", "Import NIFTI"))
         self.actionImport_Sample_Image.setText(
@@ -314,6 +347,19 @@ class MainWindowUI(object):
         self.actionQuit_App.setText(_translate("MainWindow", "Quit App"))
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
         self.actionAngle.setText(_translate("MainWindow", "Angle"))
+        self.actionWindowing.setText(_translate("MainWindow", "Windowing"))
+        self.actionGuassian.setText(
+            _translate("MainWindow", "Guassian (3x3) | Smoothing")
+        )
+        self.actionLaplacian.setText(
+            _translate("MainWindow", "Laplacian (3x3) | Sharpening")
+        )
+        self.actionMedianFilter.setText(
+            _translate("MainWindow", "Median Filter (3x3) | Denoising")
+        )
+        self.actionBilateralFilter.setText(
+            _translate("MainWindow", "Bilateral Filter (3x3) | Denoising")
+        )
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
         self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))

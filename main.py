@@ -10,7 +10,7 @@ def main():
     app = QApplication(sys.argv)
     main_window = DicomViewerBackend()
     main_window.show()
-    qdarktheme.setup_theme("dark")
+    qdarktheme.setup_theme("light")
     sys.exit(app.exec_())
 
 
