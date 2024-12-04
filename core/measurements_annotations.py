@@ -125,8 +125,16 @@ class AnnotationTool:
     def load_annotations(self):
         """Load annotations from JSON file."""
         if os.path.exists(self.annotations_file):
-            with open(self.annotations_file, 'r') as f:
-                self.annotations = json.load(f)
+            try:
+                with open(self.annotations_file, 'r') as f:
+                    self.annotations = json.load(f)
+            except json.JSONDecodeError:
+                # Handle empty or corrupted file
+                print(f"Warning: The annotations file '{self.annotations_file}' is empty or corrupted. Initializing empty annotations.")
+                self.annotations = []
+        else:
+            self.annotations = []
+
         
     def save_annotations(self):
         """Save annotations to JSON file."""
