@@ -2,14 +2,15 @@ import webbrowser
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QDialog, QFileDialog, QInputDialog, QMainWindow, QMessageBox
-from pyqtgraph import ImageView, InfiniteLine, ViewBox
+from PyQt5.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox
+from pyqtgraph import ImageView, InfiniteLine
 
+from core.annotations_handler import AnnotationTool
 from core.comparison_renderer import ComparisonRenderer
 from core.image_enhancer import ImageEnhancer
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
-from core.measurements_annotations import AnnotationTool, MeasurementTools
+from core.measurements_handler import MeasurementTools
 from core.volume_renderer import VolumeRenderer
 from ui.denoising_dialog import DenoisingDialogUI
 from ui.main_window import MainWindowUI
@@ -98,22 +99,25 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         # Add new connections for measurement tools & ROI (View Menu)
         self.ui.actionRuler.triggered.connect(self.start_ruler_measurement)
         self.ui.actionAngle.triggered.connect(self.start_angle_measurement)
-        
-            # Connect Ruler toggle
+
+        # Connect Ruler toggle
         self.ui.showRuler.toggled.connect(
-            lambda checked: self.measurement_tools.toggle_ruler(self.get_active_viewer(), checked)
+            lambda checked: self.measurement_tools.toggle_ruler(
+                self.get_active_viewer(), checked
+            )
         )
         # Connect Angle toggle
         self.ui.showAngle.toggled.connect(
-            lambda checked: self.measurement_tools.toggle_angle(self.get_active_viewer(), checked)
+            lambda checked: self.measurement_tools.toggle_angle(
+                self.get_active_viewer(), checked
+            )
         )
-        
+
         # Annotation actions
         self.ui.actionAdd_Text_Annotation.triggered.connect(self.add_text_annotation)
         self.ui.actionSave_Text_Annotation.triggered.connect(self.save_text_annotation)
         self.ui.actionLoad_Text_Annotation.triggered.connect(self.load_text_annotation)
         self.ui.actionClear_Annotations.triggered.connect(self.clear_annotations)
-
 
         # Help Menu: Documentation
         self.ui.actionDocumentation.triggered.connect(self.open_docs)
@@ -478,27 +482,6 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 lambda event, p=plane: self.update_crosshairs(p, event)
             )
 
-    # def update_crosshairs(self, plane, event):
-    #     try:
-    #         mouse_point = self.viewers[plane].getView().mapSceneToView(event)
-    #         self.crosshairs[plane]["h_line"].setPos(mouse_point.y())
-    #         self.crosshairs[plane]["v_line"].setPos(mouse_point.x())
-
-    #         # Update slice indices in ImageProcessor
-    #         if plane == "axial":
-    #             self.image_processor.update_slice("sagittal", int(mouse_point.x()))
-    #             self.image_processor.update_slice("coronal", int(mouse_point.y()))
-    #         elif plane == "sagittal":
-    #             self.image_processor.update_slice("axial", int(mouse_point.y()))
-    #             self.image_processor.update_slice("coronal", int(mouse_point.x()))
-    #         elif plane == "coronal":
-    #             self.image_processor.update_slice("axial", int(mouse_point.y()))
-    #             self.image_processor.update_slice("sagittal", int(mouse_point.x()))
-
-    #         # Refresh all viewers
-    #         self.refresh_slices()
-    #     except Exception:
-    #         pass
     def update_crosshairs(self, plane, event):
         try:
             # Map mouse position to viewer coordinates

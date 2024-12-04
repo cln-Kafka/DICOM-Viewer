@@ -98,10 +98,10 @@ class MainWindowUI(object):
 
         :param viewer: Instance of pyqtgraph.ImageView to configure.
         """
-        viewer.ui.histogram.hide()
+        # viewer.ui.histogram.hide()
         viewer.ui.roiBtn.hide()
         viewer.ui.menuBtn.hide()
-        # viewer.getHistogramWidget().autoHistogramRange = False
+        viewer.getHistogramWidget().autoHistogramRange = False
         # viewer.getView().setAspectLocked(True)
 
     def setup_tools(self):
@@ -297,7 +297,7 @@ class MainWindowUI(object):
         self.showAngle.setObjectName("showAngle")
         self.showAngle.setCheckable(True)
         self.menuView.addAction(self.showAngle)
-        
+
         ### Annotation Menu ###
         self.menuAnnotations = QtWidgets.QMenu(self.menubar)
         self.menuAnnotations.setObjectName("menuAnnotations")
@@ -309,7 +309,9 @@ class MainWindowUI(object):
         )  # Added action for text annotation
         self.actionAdd_Text_Annotation.setObjectName("actionAdd_Text_Annotation")
         self.menuAnnotations.addAction(self.actionAdd_Text_Annotation)
-        self.actionClear_Annotations = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionClear_Annotations = QtWidgets.QAction(
+            MainWindow
+        )  # Added action for text annotation
         self.actionClear_Annotations.setObjectName("actionClear_Annotations")
         self.menuAnnotations.addAction(self.actionClear_Annotations)
 
@@ -324,9 +326,6 @@ class MainWindowUI(object):
         )  # Added action for text annotation
         self.actionLoad_Text_Annotation.setObjectName("actionLoad_Text_Annotation")
         self.menuAnnotations.addAction(self.actionLoad_Text_Annotation)
-
-
-
 
         ### Image Menu ###
         self.menuImage = QtWidgets.QMenu(self.menubar)
@@ -418,11 +417,19 @@ class MainWindowUI(object):
         self.actionDenoising.setText(_translate("MainWindow", "Denoising"))
 
         # Add translations for new annotation actions
-        self.actionAdd_Text_Annotation.setText(_translate("MainWindow", "Add Annotations"))
-        self.actionClear_Annotations.setText(_translate("MainWindow", "Clear Annotations"))
-        self.actionSave_Text_Annotation.setText(_translate("MainWindow", "Save Annotations"))
-        self.actionLoad_Text_Annotation.setText(_translate("MainWindow", "Load Annotations"))
-        
+        self.actionAdd_Text_Annotation.setText(
+            _translate("MainWindow", "Add Annotations")
+        )
+        self.actionClear_Annotations.setText(
+            _translate("MainWindow", "Clear Annotations")
+        )
+        self.actionSave_Text_Annotation.setText(
+            _translate("MainWindow", "Save Annotations")
+        )
+        self.actionLoad_Text_Annotation.setText(
+            _translate("MainWindow", "Load Annotations")
+        )
+
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
         self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))
