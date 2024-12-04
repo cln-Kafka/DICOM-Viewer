@@ -60,7 +60,6 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Calling Setup Methods
         self.init_ui_connections()
-        self.setup_crosshairs()
         self.setup_viewer_tracking()
 
     def init_ui_connections(self):
@@ -104,6 +103,16 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Help Menu: Documentation
         self.ui.actionDocumentation.triggered.connect(self.open_docs)
+
+        # Overlay Toolbar
+        self.ui.contrast_slider.valueChanged.connect(self.update_contrast)
+
+        # Ortho Toolbar
+        self.ui.camera_button.clicked.connect(self.screenshot)
+        self.ui.tracking_button.clicked.connect(self.setup_crosshairs)
+        self.ui.reload_button.clicked.connect(
+            lambda: self.display_views(self.original_image_3d)
+        )
 
     def setup_viewer_tracking(self):
         """
@@ -388,6 +397,12 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             "https://github.com/hagersamir/DICOM-Viewer-Features/blob/main/README.md"
         )
 
+    ## Ortho Toolbar ##
+    ##===============##
+    def screenshot(self):
+        for plane, viewer in self.viewers.items():
+            viewer.export(fileName=f"screenshot_{plane}.png")
+
     ## Viewer Feature ##
     ##================##
     def render_slice(self, image_view: ImageView, slice_data):
@@ -431,45 +446,148 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 yMax=target,
             )
 
+    def update_contrast(self, value):
+        try:
+            # Map slider value to a contrast range
+            # Example: Assuming slider range is -50 to 50
+            contrast_range = 1 + value / 100.0  # Adjust as needed
+
+            # Adjust the contrast for all viewers
+            for plane, viewer in self.viewers.items():
+                # Get the histogram of the current viewer
+                histogram = viewer.getHistogramWidget()
+
+                # Get current min and max intensity of the image
+                image_data = self.image_processor.get_slice(plane)
+                min_intensity = np.min(image_data)
+                max_intensity = np.max(image_data)
+
+                # Calculate new levels based on contrast range
+                intensity_center = (min_intensity + max_intensity) / 2
+                new_min = (
+                    intensity_center
+                    - (intensity_center - min_intensity) * contrast_range
+                )
+                new_max = (
+                    intensity_center
+                    + (max_intensity - intensity_center) * contrast_range
+                )
+
+                # Apply the levels to the histogram
+                histogram.setLevels(new_min, new_max)
+
+                # Optionally, adjust the displayed image
+                viewer.getView().setLimits(
+                    xMin=0, xMax=image_data.shape[1], yMin=0, yMax=image_data.shape[0]
+                )
+        except Exception as e:
+            self.show_error_message(f"Error adjusting contrast: {str(e)}")
+
     ## MPR Feature ##
     ##=============##
     def setup_crosshairs(self):
-        views = {
-            "axial": self.ui.axial_viewer.getView(),
-            "sagittal": self.ui.sagittal_viewer.getView(),
-            "coronal": self.ui.coronal_viewer.getView(),
-        }
+        width, height, _ = self.original_image_3d.shape
 
-        for plane, view in views.items():
-            h_line = InfiniteLine(angle=0, movable=False, pen="b")
-            v_line = InfiniteLine(angle=90, movable=False, pen="b")
+        for plane, view in self.views.items():
+            h_line = InfiniteLine(pos=width / 2, angle=0, movable=False, pen="b")
+            v_line = InfiniteLine(pos=height / 2, angle=90, movable=False, pen="b")
             view.addItem(h_line)
             view.addItem(v_line)
-            self.crosshairs[plane] = {
-                "h_line": h_line,
-                "v_line": v_line,
-            }
+            self.crosshairs[plane] = {"h_line": h_line, "v_line": v_line}
 
-        # Connect the crosshairs to the update_crosshairs function
-        for plane, view in views.items():
-            h_line = self.crosshairs[plane]["h_line"]
-            v_line = self.crosshairs[plane]["v_line"]
-            self.update_crosshairs(view, h_line, v_line)
+        for plane, viewer in self.viewers.items():
+            viewer.scene.sigMouseMoved.connect(
+                lambda event, p=plane: self.update_crosshairs(p, event)
+            )
 
-    def update_crosshairs(
-        self,
-        view: ViewBox,
-        h_line: InfiniteLine,
-        v_line: InfiniteLine,
-    ):
-        # Get the range of the view
-        x_range, y_range = view.viewRange()
-        # Calculate the center of the range
-        x_center = (x_range[0] + x_range[1]) / 2
-        y_center = (y_range[0] + y_range[1]) / 2
-        # Set the position of the crosshairs to the center
-        h_line.setPos(y_center)
-        v_line.setPos(x_center)
+    # def update_crosshairs(self, plane, event):
+    #     try:
+    #         mouse_point = self.viewers[plane].getView().mapSceneToView(event)
+    #         self.crosshairs[plane]["h_line"].setPos(mouse_point.y())
+    #         self.crosshairs[plane]["v_line"].setPos(mouse_point.x())
+
+    #         # Update slice indices in ImageProcessor
+    #         if plane == "axial":
+    #             self.image_processor.update_slice("sagittal", int(mouse_point.x()))
+    #             self.image_processor.update_slice("coronal", int(mouse_point.y()))
+    #         elif plane == "sagittal":
+    #             self.image_processor.update_slice("axial", int(mouse_point.y()))
+    #             self.image_processor.update_slice("coronal", int(mouse_point.x()))
+    #         elif plane == "coronal":
+    #             self.image_processor.update_slice("axial", int(mouse_point.y()))
+    #             self.image_processor.update_slice("sagittal", int(mouse_point.x()))
+
+    #         # Refresh all viewers
+    #         self.refresh_slices()
+    #     except Exception:
+    #         pass
+    def update_crosshairs(self, plane, event):
+        try:
+            # Map mouse position to viewer coordinates
+            mouse_point = self.viewers[plane].getView().mapSceneToView(event)
+            x = int(mouse_point.x())
+            y = int(mouse_point.y())
+
+            # Ensure coordinates are within bounds
+            x = max(0, min(x, self.original_image_3d.shape[2] - 1))
+            y = max(0, min(y, self.original_image_3d.shape[1] - 1))
+
+            # Determine z-coordinate based on the current plane
+            if plane == "axial":
+                z = self.image_processor.current_slices["axial"]
+            elif plane == "sagittal":
+                z = x
+                x = self.image_processor.current_slices["sagittal"]
+            elif plane == "coronal":
+                z = y
+                y = self.image_processor.current_slices["coronal"]
+
+            # Update crosshairs
+            self.crosshairs[plane]["h_line"].setPos(y)
+            self.crosshairs[plane]["v_line"].setPos(x)
+
+            # Update slice indices in ImageProcessor
+            if plane == "axial":
+                self.image_processor.update_slice("sagittal", x)
+                self.image_processor.update_slice("coronal", y)
+            elif plane == "sagittal":
+                self.image_processor.update_slice("axial", y)
+                self.image_processor.update_slice("coronal", x)
+            elif plane == "coronal":
+                self.image_processor.update_slice("axial", y)
+                self.image_processor.update_slice("sagittal", x)
+
+            # Update coordinate fields
+            self.ui.x_value.setText(str(x))
+            self.ui.y_value.setText(str(y))
+            self.ui.z_value.setText(str(z))
+
+            # Get and display the voxel value
+            voxel_value = self.original_image_3d[z, y, x]
+            self.ui.voxel_value.setText(str(voxel_value))
+
+            # Refresh all viewers
+            self.refresh_slices()
+        except Exception as e:
+            self.show_error_message(f"Error updating crosshairs: {str(e)}")
+
+    def refresh_slices(self):
+        for plane in self.viewers.keys():
+            slice_data = self.image_processor.get_slice(plane)
+            self.render_slice(self.viewers[plane], slice_data)
+
+    def update_location_display(self, x, y, z):
+        try:
+            # Update coordinates
+            self.ui.x_value.setText(str(x))
+            self.ui.y_value.setText(str(y))
+            self.ui.z_value.setText(str(z))
+
+            # Get the voxel value
+            voxel_value = self.image_processor.image_data[z, y, x]
+            self.ui.voxel_value.setText(str(voxel_value))
+        except Exception as e:
+            self.show_error_message(f"Error fetching voxel data: {str(e)}")
 
     ## Utils ##
     ##=======##

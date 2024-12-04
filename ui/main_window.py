@@ -98,9 +98,10 @@ class MainWindowUI(object):
 
         :param viewer: Instance of pyqtgraph.ImageView to configure.
         """
-        # viewer.ui.histogram.hide()
+        viewer.ui.histogram.hide()
         viewer.ui.roiBtn.hide()
         viewer.ui.menuBtn.hide()
+        # viewer.getHistogramWidget().autoHistogramRange = False
         # viewer.getView().setAspectLocked(True)
 
     def setup_tools(self):
@@ -119,7 +120,6 @@ class MainWindowUI(object):
         self.splitter.setObjectName("main_splitter")
 
         # Setup overlay list and location panel
-        self.setup_overlay_list()
         self.setup_location_panel()
 
         # Add the splitter to the tools layout
@@ -205,14 +205,6 @@ class MainWindowUI(object):
         self.overlay_toolbar.setMovable(False)
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.overlay_toolbar)
 
-        # Add widgets to the Overlay Toolbar
-        self.brightness_label = QtWidgets.QLabel("Brightness")
-        self.brightness_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.brightness_slider.setRange(-50, 50)
-        self.brightness_slider.setValue(0)
-        self.overlay_toolbar.addWidget(self.brightness_label)
-        self.overlay_toolbar.addWidget(self.brightness_slider)
-
         self.contrast_label = QtWidgets.QLabel("Contrast")
         self.contrast_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.contrast_slider.setRange(-50, 50)
@@ -228,16 +220,20 @@ class MainWindowUI(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.ortho_toolbar)
 
         # Add widgets to the Ortho Toolbar
-        self.zoom_label = QtWidgets.QLabel("Zoom")
-        self.zoom_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.zoom_slider.setRange(10, 200)
-        self.zoom_slider.setValue(100)
-        self.ortho_toolbar.addWidget(self.zoom_label)
-        self.ortho_toolbar.addWidget(self.zoom_slider)
+        self.camera_button = QtWidgets.QPushButton()
+        self.camera_button.setIcon(QtGui.QIcon("assets/icons/camera.png"))
+        self.camera_button.setIconSize(QtCore.QSize(24, 24))
+        self.ortho_toolbar.addWidget(self.camera_button)
 
-        # Add buttons for other orthogonal view options
-        self.ortho_button = QtWidgets.QPushButton("Reset View")
-        self.ortho_toolbar.addWidget(self.ortho_button)
+        self.tracking_button = QtWidgets.QPushButton()
+        self.tracking_button.setIcon(QtGui.QIcon("assets/icons/tracking.png"))
+        self.tracking_button.setIconSize(QtCore.QSize(24, 24))
+        self.ortho_toolbar.addWidget(self.tracking_button)
+
+        self.reload_button = QtWidgets.QPushButton()
+        self.reload_button.setIcon(QtGui.QIcon("assets/icons/reload.png"))
+        self.reload_button.setIconSize(QtCore.QSize(24, 24))
+        self.ortho_toolbar.addWidget(self.reload_button)
 
         # Add a horizontal spacer
         spacer = QtWidgets.QWidget()
