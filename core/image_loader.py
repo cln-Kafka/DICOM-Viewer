@@ -1,9 +1,32 @@
+import os
+
 import nibabel as nib
+import numpy as np
 import SimpleITK as sitk
-from vtkmodules.util import numpy_support
 
 
 class ImageLoader:
+    @staticmethod
+    def load_image(file_path):
+        try:
+            ext = os.path.splitext(file_path)[-1].lower()
+
+            if ext in [".nii", ".nii.gz"]:
+                return ImageLoader.load_nifti(file_path)
+
+            elif ext in [".mgh", ".mgz", ".mhd", ".nrrd"]:
+                image = sitk.ReadImage(file_path)
+                return (
+                    sitk.GetArrayFromImage(image),
+                    image.GetSpacing(),
+                )
+
+            elif ext == ".dcm" or os.path.isdir(file_path):
+                return ImageLoader.load_dicom_series(file_path)
+
+        except Exception as e:
+            raise ValueError(f"Unsupported image format: {e}")
+
     @staticmethod
     def load_nifti(file_path):
         try:

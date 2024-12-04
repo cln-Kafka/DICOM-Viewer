@@ -1,21 +1,18 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pyqtgraph import HistogramLUTItem, ImageView, InfiniteLine
-from pyqtgraph import ImageView
+from pyqtgraph import HistogramLUTItem, ImageView, InfiniteLine, ViewBox
 
 
 class MainWindowUI(object):
     def setupUi(self, MainWindow: QtWidgets.QMainWindow):
         MainWindow.setObjectName("dicom_viewer_main_window")
+        # Not to block interactions with other windows of the app
         MainWindow.setWindowModality(QtCore.Qt.NonModal)
         MainWindow.setEnabled(True)
         MainWindow.resize(1280, 720)
         MainWindow.setMinimumSize(QtCore.QSize(1280, 720))
-        MainWindow.setMaximumSize(QtCore.QSize(16777215, 16777213))
+        # Commented the maximum size to allow resizing
+        # MainWindow.setMaximumSize(QtCore.QSize(16777215, 16777213))
         MainWindow.setWindowIcon(QtGui.QIcon("assets/icons/logo.png"))
-        font = QtGui.QFont()
-        font.setFamily("Poppins")
-        font.setPointSize(9)
-        MainWindow.setFont(font)
         MainWindow.setMouseTracking(False)
         MainWindow.setAcceptDrops(True)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -35,6 +32,14 @@ class MainWindowUI(object):
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+        # Apply the font to all widgets
+        self.apply_font_to_all_widgets(
+            QtGui.QFont(
+                "Poppins",
+                9,
+            ),
+        )
+
     def setup_viewers(self):
         # A layout to hold the viewer ports
         self.ortho_view_layout = QtWidgets.QGridLayout()
@@ -44,31 +49,34 @@ class MainWindowUI(object):
         # Add the layout to the main layout
         self.main_layout.addLayout(self.ortho_view_layout)
 
-        # Adding 3 PyQtGraph ImageViews
-        self.axial_viewer = ImageView(self.centralwidget)
-        self.sagittal_viewer = ImageView(self.centralwidget)
-        self.coronal_viewer = ImageView(self.centralwidget)
+        # Adding 3 PyQtGraph ViewBoxes, ImageViews
+        self.axial_view = ViewBox()
+        self.sagittal_view = ViewBox()
+        self.coronal_view = ViewBox()
+
+        self.remove_views_links()
+
+        self.axial_viewer = ImageView(self.centralwidget, view=self.axial_view)
+        self.sagittal_viewer = ImageView(self.centralwidget, view=self.sagittal_view)
+        self.coronal_viewer = ImageView(self.centralwidget, view=self.coronal_view)
 
         # Place them in the grid layout
         self.ortho_view_layout.addWidget(self.axial_viewer, 0, 0)
         self.ortho_view_layout.addWidget(self.sagittal_viewer, 0, 1)
         self.ortho_view_layout.addWidget(self.coronal_viewer, 0, 2)
 
-        # Sync the viewers
-        # self.sync_viewers()
-
         # Customize initial settings if needed
         self.setup_image_viewer(self.axial_viewer)
         self.setup_image_viewer(self.sagittal_viewer)
         self.setup_image_viewer(self.coronal_viewer)
 
-    def sync_viewers(self):
-        self.axial_viewer.getView().setXLink(self.sagittal_viewer.getView())
-        self.axial_viewer.getView().setYLink(self.coronal_viewer.getView())
-        self.sagittal_viewer.getView().setXLink(self.axial_viewer.getView())
-        self.sagittal_viewer.getView().setYLink(self.coronal_viewer.getView())
-        self.coronal_viewer.getView().setXLink(self.axial_viewer.getView())
-        self.coronal_viewer.getView().setYLink(self.sagittal_viewer.getView())
+    def remove_views_links(self):
+        self.axial_view.linkView(ViewBox.XAxis, None)
+        self.axial_view.linkView(ViewBox.YAxis, None)
+        self.sagittal_view.linkView(ViewBox.XAxis, None)
+        self.sagittal_view.linkView(ViewBox.YAxis, None)
+        self.coronal_view.linkView(ViewBox.XAxis, None)
+        self.coronal_view.linkView(ViewBox.YAxis, None)
 
     def setup_image_viewer(self, viewer: ImageView):
         """
@@ -79,7 +87,7 @@ class MainWindowUI(object):
         # viewer.ui.histogram.hide()  # Hide histogram for simplicity (optional)
         viewer.ui.roiBtn.hide()  # Hide ROI button
         viewer.ui.menuBtn.hide()  # Hide menu button
-        viewer.getView().setAspectLocked(True)  # Lock aspect ratio
+        # viewer.getView().setAspectLocked(True)  # Lock aspect ratio
 
     def setup_tools(self):
         # Main tools layout (already exists)
@@ -213,7 +221,7 @@ class MainWindowUI(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.ortho_toolbar)
 
         # Add widgets to the Ortho Toolbar
-        self.zoom_label = QtWidgets.QLabel("Zoom:")
+        self.zoom_label = QtWidgets.QLabel("Zoom")
         self.zoom_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.zoom_slider.setRange(10, 200)
         self.zoom_slider.setValue(100)
@@ -223,6 +231,13 @@ class MainWindowUI(object):
         # Add buttons for other orthogonal view options
         self.ortho_button = QtWidgets.QPushButton("Reset View")
         self.ortho_toolbar.addWidget(self.ortho_button)
+
+        # Add a horizontal spacer
+        spacer = QtWidgets.QWidget()
+        spacer.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
+        self.ortho_toolbar.addWidget(spacer)
 
     def setup_menu_bar(self, MainWindow: QtWidgets.QMainWindow):
         ## Menubar ##
@@ -237,9 +252,11 @@ class MainWindowUI(object):
         self.menubar.addAction(self.menuFile.menuAction())
 
         #### File Menu Actions ####
+        self.actionImport_Image = QtWidgets.QAction(MainWindow)
+        self.actionImport_Image.setObjectName("actionImport_Image")
+        self.actionImport_Image.setShortcut("Ctrl+I")
         self.actionImport_NIFTI = QtWidgets.QAction(MainWindow)
         self.actionImport_NIFTI.setObjectName("actionImport_NIFTI")
-        self.actionImport_NIFTI.setShortcut("Ctrl+I")
         self.actionImport_Sample_Image = QtWidgets.QAction(MainWindow)
         self.actionImport_Sample_Image.setObjectName("actionImport_Sample_Image")
         self.actionImport_DICOM_Series = QtWidgets.QAction(MainWindow)
@@ -248,11 +265,12 @@ class MainWindowUI(object):
         self.actionQuit_App.setObjectName("actionQuit_App")
         self.actionQuit_App.setShortcut("Ctrl+Q")
 
+        self.menuFile.addAction(self.actionImport_Image)
         self.menuFile.addAction(self.actionImport_NIFTI)
         self.menuFile.addAction(self.actionImport_Sample_Image)
         self.menuFile.addAction(self.actionImport_DICOM_Series)
-        self.menuFile.addAction(self.actionQuit_App)
         self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionQuit_App)
 
         ### View Menu ###
         self.menuView = QtWidgets.QMenu(self.menubar)
@@ -299,9 +317,37 @@ class MainWindowUI(object):
         self.menubar.addAction(self.menuImage.menuAction())
 
         #### Image Menu Actions ####
+        self.actionWindowing = QtWidgets.QAction(MainWindow)
+        self.actionWindowing.setObjectName("actionWindowing")
+        self.menuImage.addAction(self.actionWindowing)
+        # Filters menu inside Image menu
+        self.subMenuFilters = QtWidgets.QMenu(self.menuImage)
+        self.subMenuFilters.setObjectName("subMenuFilters")
+        self.menuImage.addMenu(
+            self.subMenuFilters
+        )  # Correct method for adding a submenu
+
+        # Filters actions
+        self.actionSmoothing = QtWidgets.QAction(MainWindow)
+        self.actionSmoothing.setObjectName("actionSmoothing")
+        self.subMenuFilters.addAction(self.actionSmoothing)
+
+        self.actionSharpening = QtWidgets.QAction(MainWindow)
+        self.actionSharpening.setObjectName("actionSharpening")
+        self.subMenuFilters.addAction(self.actionSharpening)
+
+        self.actionDenoising = QtWidgets.QAction(MainWindow)
+        self.actionDenoising.setObjectName("actionDenoising")
+        self.subMenuFilters.addAction(self.actionDenoising)
+
+        # Add a separator between filters and other actions
+        self.menuImage.addSeparator()
+
+        # Additional actions inside the Image menu
         self.actionBuild_Surface = QtWidgets.QAction(MainWindow)
         self.actionBuild_Surface.setObjectName("actionBuild_Surface")
         self.menuImage.addAction(self.actionBuild_Surface)
+
         self.actionComparison_Mode = QtWidgets.QAction(MainWindow)
         self.actionComparison_Mode.setObjectName("actionComparison_Mode")
         self.menuImage.addAction(self.actionComparison_Mode)
@@ -322,6 +368,11 @@ class MainWindowUI(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
+    def apply_font_to_all_widgets(self, font):
+        app = QtWidgets.QApplication.instance()
+        for widget in app.allWidgets():
+            widget.setFont(font)
+
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "Dicom Viewer"))
@@ -329,7 +380,9 @@ class MainWindowUI(object):
         self.menuView.setTitle(_translate("MainWindow", "View"))
         self.menuAnnotations.setTitle(_translate("MainWindow", "Annotations"))
         self.menuImage.setTitle(_translate("MainWindow", "Image"))
+        self.subMenuFilters.setTitle(_translate("MainWindow", "Filters"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
+        self.actionImport_Image.setText(_translate("MainWindow", "Import Image"))
         self.actionImport_NIFTI.setText(_translate("MainWindow", "Import NIFTI"))
         self.actionImport_Sample_Image.setText(
             _translate("MainWindow", "Import Sample Image")
@@ -340,12 +393,18 @@ class MainWindowUI(object):
         self.actionQuit_App.setText(_translate("MainWindow", "Quit App"))
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
         self.actionAngle.setText(_translate("MainWindow", "Angle"))
+        self.actionWindowing.setText(_translate("MainWindow", "Windowing"))
+        self.actionSmoothing.setText(_translate("MainWindow", "Smoothing"))
+        self.actionSharpening.setText(_translate("MainWindow", "Sharpening"))
+        self.actionDenoising.setText(_translate("MainWindow", "Denoising"))
+
         # Add translations for new annotation actions
         self.actionAdd_Text_Annotation.setText(_translate("MainWindow", "Add Text Annotation"))
         self.actionSave_Text_Annotation.setText(_translate("MainWindow", "Save Annotations"))
         self.actionLoad_Text_Annotation.setText(_translate("MainWindow", "Load Annotations"))
         self.actionDelete_Text_Annotation.setText(_translate("MainWindow", "Delete Annotations"))
         self.actionClear_Measurements.setText(_translate("MainWindow", "Clear Measurements"))
+        
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
         self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))
