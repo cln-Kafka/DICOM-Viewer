@@ -1,34 +1,26 @@
 [
     {
-        "text": "awfegsdxhcgk",
+        "viewer": "axial",
+        "text": "6jsj",
         "position": [
             50,
             50
-        ],
-        "metadata": {}
+        ]
     },
     {
-        "text": "aehsrjdfcgk",
+        "viewer": "sagittal",
+        "text": "syryk",
         "position": [
             50,
             50
-        ],
-        "metadata": {}
+        ]
     },
     {
-        "text": "kimo",
+        "viewer": "coronal",
+        "text": "yrkmsk4wk",
         "position": [
             50,
             50
-        ],
-        "metadata": {}
-    },
-    {
-        "text": "aaevazxv",
-        "position": [
-            50,
-            50
-        ],
-        "metadata": {}
+        ]
     }
 ]
