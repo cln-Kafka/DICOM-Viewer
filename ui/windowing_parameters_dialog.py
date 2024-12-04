@@ -60,6 +60,12 @@ class WindowingDialogUI(QtWidgets.QDialog):
         # Connect the apply button to accept the dialog
         self.applyWindowingButton.clicked.connect(self.accept)
 
+    def get_parameters(self):
+        return (
+            self.windowLevelDoubleSpinBox.value(),
+            self.windowWidthDoubleSpinBox.value(),
+        )
+
     def retranslateUi(self, WindowingDialog):
         _translate = QtCore.QCoreApplication.translate
         WindowingDialog.setWindowTitle(

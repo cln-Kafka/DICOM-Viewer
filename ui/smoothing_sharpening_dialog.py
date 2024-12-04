@@ -98,6 +98,12 @@ class SmoothingAndSharpeningDialogUI(QDialog):
 
         self.mainLayout.addLayout(self.sharpening_strength_layout)
 
+    def get_parameters(self, mode):
+        if mode == "Smoothing":
+            return self.sigma_spinbox.value(), self.smoothing_strength_spinbox.value()
+        elif mode == "Sharpening":
+            return self.sharpening_strength_spinbox.value()
+
     def retranslateUi(self, SmoothingSharpeningDialog):
         _translate = QCoreApplication.translate
         if self.mode == "Smoothing":

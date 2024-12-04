@@ -206,13 +206,6 @@ class MainWindowUI(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.overlay_toolbar)
 
         # Add widgets to the Overlay Toolbar
-        self.opacity_label = QtWidgets.QLabel("Opacity")
-        self.opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.opacity_slider.setRange(0, 100)
-        self.opacity_slider.setValue(50)  # Default value
-        self.overlay_toolbar.addWidget(self.opacity_label)
-        self.overlay_toolbar.addWidget(self.opacity_slider)
-
         self.brightness_label = QtWidgets.QLabel("Brightness")
         self.brightness_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.brightness_slider.setRange(-50, 50)
