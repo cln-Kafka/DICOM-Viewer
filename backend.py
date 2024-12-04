@@ -92,14 +92,28 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui.actionBuild_Surface.triggered.connect(self.build_surface)
         self.ui.actionComparison_Mode.triggered.connect(self.comparison_mode)
 
-        # Annotations Menu
-        self.ui.actionAdd_Text_Annotation.triggered.connect(self.add_text_annotation)
-        self.ui.actionSave_Text_Annotation.triggered.connect(self.load_text_annotation)
-        self.ui.actionLoad_Text_Annotation.triggered.connect(self.save_text_annotation)
-        self.ui.actionDelete_Text_Annotation.triggered.connect(
-            self.delete_text_annotation
+        # Help Menu
+        self.ui.actionDocumentation.triggered.connect(self.open_docs)
+
+        # Add new connections for measurement tools & ROI (View Menu)
+        self.ui.actionRuler.triggered.connect(self.start_ruler_measurement)
+        self.ui.actionAngle.triggered.connect(self.start_angle_measurement)
+        
+            # Connect Ruler toggle
+        self.ui.showRuler.toggled.connect(
+            lambda checked: self.measurement_tools.toggle_ruler(self.get_active_viewer(), checked)
         )
-        self.ui.actionClear_Measurements.triggered.connect(self.clear_all)
+        # Connect Angle toggle
+        self.ui.showAngle.toggled.connect(
+            lambda checked: self.measurement_tools.toggle_angle(self.get_active_viewer(), checked)
+        )
+        
+        # Annotation actions
+        self.ui.actionAdd_Text_Annotation.triggered.connect(self.add_text_annotation)
+        self.ui.actionSave_Text_Annotation.triggered.connect(self.save_text_annotation)
+        self.ui.actionLoad_Text_Annotation.triggered.connect(self.load_text_annotation)
+        self.ui.actionClear_Annotations.triggered.connect(self.clear_annotations)
+
 
         # Help Menu: Documentation
         self.ui.actionDocumentation.triggered.connect(self.open_docs)
@@ -181,60 +195,24 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             )
 
     def add_text_annotation(self):
-        """
-        Add a text annotation to the current active viewer.
-        """
-        try:
-            active_viewer = self.get_active_viewer()
-            if active_viewer:
-                # Prompt the user for annotation text
-                annotation_text, ok = QInputDialog.getText(
-                    self, "Add Text Annotation", "Enter annotation text:"
-                )
-
-                if ok and annotation_text:
-                    # Define a default position for the annotation
-                    default_position = (50, 50)  # Example coordinates
-
-                    # Create the text annotation
-                    annotation = self.annotation_tool.add_text_annotation(
-                        active_viewer, annotation_text, default_position
-                    )
-
-            else:
-                self.show_error_message(
-                    "No active viewer found to add the text annotation."
-                )
-        except Exception as e:
-            self.show_error_message(f"Error adding text annotation: {str(e)}")
-
-    def load_text_annotation(self):
-        self.annotation_tool.load_annotations()
+        """Add a text annotation to the current active viewer."""
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.annotation_tool.add_text_annotation(active_viewer)
 
     def save_text_annotation(self):
+        """Save annotations."""
         self.annotation_tool.save_annotations()
 
-    def delete_text_annotation(self):
-        self.annotation_tool.delete_annotation()
+    def load_text_annotation(self):
+        """Load annotations."""
+        self.annotation_tool.load_annotations()
 
-    def clear_all(self):
-        """
-        Clear all measurement tools and annotations from all viewers.
-        """
-        # List of all viewers to clear
-        viewers = [
-            self.ui.axial_viewer,
-            self.ui.sagittal_viewer,
-            self.ui.coronal_viewer,
-        ]
-
-        # Clear all measurements
-        for viewer in viewers:
-            self.measurement_tools.clear_measurements(viewer)
-
-        # Clear all annotations
-        for viewer in viewers:
-            self.annotation_tool.clear_annotations(viewer)
+    def clear_annotations(self):
+        """Clear annotations for the current active viewer."""
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.annotation_tool.clear_annotations(active_viewer)
 
     ## File Menu ##
     ##===========##

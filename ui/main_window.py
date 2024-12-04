@@ -285,11 +285,19 @@ class MainWindowUI(object):
         self.actionRuler.setObjectName("actionRuler")
         self.actionRuler.setCheckable(True)
         self.menuView.addAction(self.actionRuler)
+        self.showRuler = QtWidgets.QAction(MainWindow)
+        self.showRuler.setObjectName("showRuler")
+        self.showRuler.setCheckable(True)
+        self.menuView.addAction(self.showRuler)
         self.actionAngle = QtWidgets.QAction(MainWindow)
         self.actionAngle.setObjectName("actionAngle")
         self.actionAngle.setCheckable(True)
         self.menuView.addAction(self.actionAngle)
-
+        self.showAngle = QtWidgets.QAction(MainWindow)
+        self.showAngle.setObjectName("showAngle")
+        self.showAngle.setCheckable(True)
+        self.menuView.addAction(self.showAngle)
+        
         ### Annotation Menu ###
         self.menuAnnotations = QtWidgets.QMenu(self.menubar)
         self.menuAnnotations.setObjectName("menuAnnotations")
@@ -301,6 +309,9 @@ class MainWindowUI(object):
         )  # Added action for text annotation
         self.actionAdd_Text_Annotation.setObjectName("actionAdd_Text_Annotation")
         self.menuAnnotations.addAction(self.actionAdd_Text_Annotation)
+        self.actionClear_Annotations = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionClear_Annotations.setObjectName("actionClear_Annotations")
+        self.menuAnnotations.addAction(self.actionClear_Annotations)
 
         self.actionSave_Text_Annotation = QtWidgets.QAction(
             MainWindow
@@ -314,17 +325,8 @@ class MainWindowUI(object):
         self.actionLoad_Text_Annotation.setObjectName("actionLoad_Text_Annotation")
         self.menuAnnotations.addAction(self.actionLoad_Text_Annotation)
 
-        self.actionDelete_Text_Annotation = QtWidgets.QAction(
-            MainWindow
-        )  # Added action for text annotation
-        self.actionDelete_Text_Annotation.setObjectName("actionDelete_Text_Annotation")
-        self.menuAnnotations.addAction(self.actionDelete_Text_Annotation)
 
-        self.actionClear_Measurements = QtWidgets.QAction(
-            MainWindow
-        )  # Added action for clearing measurements
-        self.actionClear_Measurements.setObjectName("actionClear_Measurements")
-        self.menuAnnotations.addAction(self.actionClear_Measurements)
+
 
         ### Image Menu ###
         self.menuImage = QtWidgets.QMenu(self.menubar)
@@ -407,29 +409,20 @@ class MainWindowUI(object):
         )
         self.actionQuit_App.setText(_translate("MainWindow", "Quit App"))
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
+        self.showRuler.setText(_translate("MainWindow", "Show Ruler"))
         self.actionAngle.setText(_translate("MainWindow", "Angle"))
+        self.showAngle.setText(_translate("MainWindow", "Show Angle"))
         self.actionWindowing.setText(_translate("MainWindow", "Windowing"))
         self.actionSmoothing.setText(_translate("MainWindow", "Smoothing"))
         self.actionSharpening.setText(_translate("MainWindow", "Sharpening"))
         self.actionDenoising.setText(_translate("MainWindow", "Denoising"))
 
         # Add translations for new annotation actions
-        self.actionAdd_Text_Annotation.setText(
-            _translate("MainWindow", "Add Text Annotation")
-        )
-        self.actionSave_Text_Annotation.setText(
-            _translate("MainWindow", "Save Annotations")
-        )
-        self.actionLoad_Text_Annotation.setText(
-            _translate("MainWindow", "Load Annotations")
-        )
-        self.actionDelete_Text_Annotation.setText(
-            _translate("MainWindow", "Delete Annotations")
-        )
-        self.actionClear_Measurements.setText(
-            _translate("MainWindow", "Clear Measurements")
-        )
-
+        self.actionAdd_Text_Annotation.setText(_translate("MainWindow", "Add Annotations"))
+        self.actionClear_Annotations.setText(_translate("MainWindow", "Clear Annotations"))
+        self.actionSave_Text_Annotation.setText(_translate("MainWindow", "Save Annotations"))
+        self.actionLoad_Text_Annotation.setText(_translate("MainWindow", "Load Annotations"))
+        
         self.actionBuild_Surface.setText(_translate("MainWindow", "Build Surface"))
         self.actionComparison_Mode.setText(_translate("MainWindow", "Comparison Mode"))
         self.actionDocumentation.setText(_translate("MainWindow", "Documentation"))
