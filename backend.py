@@ -1,7 +1,8 @@
 import webbrowser
 
 import numpy as np
-from PyQt5.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QInputDialog
+import pyqtgraph as pg
 from pyqtgraph import ROI, ImageView, InfiniteLine, ViewBox
 
 from core.comparison_renderer import ComparisonRenderer
@@ -9,6 +10,7 @@ from core.image_enhancer import ImageEnhancer
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
 from core.volume_renderer import VolumeRenderer
+from core.measurements_annotations import MeasurementTools, AnnotationTool
 from ui.denoising_dialog import DenoisingDialogUI
 from ui.main_window import MainWindowUI
 from ui.smoothing_sharpening_dialog import SmoothingAndSharpeningDialogUI
@@ -23,10 +25,12 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui.setupUi(self)
 
         # Initialize components
+        self._active_viewer = None
         self.loaded_image_data = None
         self.spacing_info = None
         self.image_loader = ImageLoader()
         self.image_processor = ImageProcessor()
+        
         self.viewers = {
             "axial": self.ui.axial_viewer,
             "sagittal": self.ui.sagittal_viewer,
@@ -38,8 +42,13 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             "coronal": self.ui.coronal_view,
         }
 
+        # Measurement and Annotation Tools
+        self.measurement_tools = MeasurementTools(self)
+        self.annotation_tool = AnnotationTool(self)
+
         # UI Variables
         self.crosshairs = {}
+        self.current_active_measurement = None
 
         # File history management
         self.file_history_manager = FileHistoryManager(
@@ -51,6 +60,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Setup crosshairs
         self.setup_crosshairs()
+        
+        # Setup mouse tracking and focus events
+        self.setup_viewer_tracking()
 
     def init_ui_connections(self):
         # File Menu
@@ -66,10 +78,6 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         )
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
 
-        # View Menu
-        self.ui.actionRuler.triggered.connect(lambda: self.ruler(self.ui.axial_viewer))
-        self.ui.actionAngle.triggered.connect(self.angle)
-
         # Image Menu
         self.ui.actionWindowing.triggered.connect(self.windowing)
         self.ui.actionSmoothing.triggered.connect(
@@ -84,6 +92,134 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Help Menu
         self.ui.actionDocumentation.triggered.connect(self.open_docs)
+
+        # Add new connections for measurement tools & ROI (View Menu)
+        self.ui.actionRuler.triggered.connect(self.start_ruler_measurement)
+        self.ui.actionAngle.triggered.connect(self.start_angle_measurement)
+        
+        #Annotation actions (Annotation Menu)
+        self.ui.actionAdd_Text_Annotation.triggered.connect(self.add_text_annotation)
+        self.ui.actionSave_Text_Annotation.triggered.connect(self.load_text_annotation)
+        self.ui.actionLoad_Text_Annotation.triggered.connect(self.save_text_annotation)
+        self.ui.actionDelete_Text_Annotation.triggered.connect(self.delete_text_annotation)
+        self.ui.actionClear_Measurements.triggered.connect(self.clear_all)
+
+    def setup_viewer_tracking(self):
+        """
+        Setup mouse tracking and focus events for viewers.
+        """
+        viewers = [
+            self.ui.axial_viewer, 
+            self.ui.sagittal_viewer, 
+            self.ui.coronal_viewer
+        ]
+
+        for viewer in viewers:
+            # Enable mouse tracking
+            viewer.getView().scene().sigMouseMoved.connect(
+                lambda pos, v=viewer: self.on_viewer_mouse_move(v, pos)
+            )
+
+    def on_viewer_mouse_move(self, viewer, pos):
+        """
+        Handle mouse movement over a viewer.
+        """
+        # Optionally update the active viewer when mouse moves
+        self.set_active_viewer(viewer)
+
+    def set_active_viewer(self, viewer):
+        """
+        Set the currently active viewer.
+        """
+        # Deselect previous viewer
+        if self._active_viewer:
+            self._active_viewer.getView().setBorder(None)
+        
+        # Set new active viewer
+        self._active_viewer = viewer
+        
+        # Optionally highlight the active viewer
+        viewer.getView().setBorder(pg.mkPen(color='green', width=2))
+        
+        return viewer
+
+    def get_active_viewer(self):
+        """
+        Get the currently active viewer.
+        Default to axial viewer if no viewer is active.
+        """
+        return self._active_viewer or self.ui.axial_viewer
+
+    def start_ruler_measurement(self):
+        """
+        Activate ruler measurement tool on the current active viewer.
+        """
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.current_active_measurement = self.measurement_tools.create_ruler(active_viewer)
+
+    def start_angle_measurement(self):
+        """
+        Activate angle measurement tool on the current active viewer.
+        """
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.current_active_measurement = self.measurement_tools.create_angle_measurement(active_viewer)
+
+    def add_text_annotation(self):
+        """
+        Add a text annotation to the current active viewer.
+        """
+        try:
+            active_viewer = self.get_active_viewer()
+            if active_viewer:
+                # Prompt the user for annotation text 
+                annotation_text, ok = QInputDialog.getText(
+                    self, 
+                    "Add Text Annotation", 
+                    "Enter annotation text:"
+                )
+                
+                if ok and annotation_text:
+                    # Define a default position for the annotation
+                    default_position = (50, 50)  # Example coordinates
+
+                    # Create the text annotation
+                    annotation = self.annotation_tool.add_text_annotation(
+                        active_viewer, 
+                        annotation_text, 
+                        default_position
+                    )
+
+                    # Log the action
+                    print(f"Text annotation added at position {default_position} with text: '{annotation_text}'")
+            else:
+                self.show_error_message("No active viewer found to add the text annotation.")
+        except Exception as e:
+            self.show_error_message(f"Error adding text annotation: {str(e)}")
+    def load_text_annotation(self):
+        self.annotation_tool.load_annotations()
+    def save_text_annotation(self):
+        self.annotation_tool.save_annotations()
+    def delete_text_annotation(self):
+        self.annotation_tool.delete_annotation()
+    def clear_all(self):
+        """
+        Clear all measurement tools and annotations from all viewers.
+        """
+        # List of all viewers to clear
+        viewers = [self.ui.axial_viewer, self.ui.sagittal_viewer, self.ui.coronal_viewer]
+
+        # Clear all measurements
+        for viewer in viewers:
+            self.measurement_tools.clear_measurements(viewer)
+
+        # Clear all annotations
+        for viewer in viewers:
+            self.annotation_tool.clear_annotations(viewer)
+
+        # Log action or show confirmation
+        print("All measurements and annotations cleared.")
 
     def import_image(self, image_type, file_path=None):
         try:
@@ -195,13 +331,6 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 yMin=-height / 2,
                 yMax=height / 2,
             )
-
-    def ruler(self, viewer: ImageView):
-        viewer.addItem(ROI(viewer, [0, 0], [1, 1]))
-        # viewer.ui.roiBtn.click()
-
-    def angle(self):
-        pass
 
     def build_surface(self):
         self.volume_renderer = VolumeRenderer()
