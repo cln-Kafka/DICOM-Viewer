@@ -43,18 +43,23 @@ class MainWindowUI(object):
     def setup_viewers(self):
         # A layout to hold the viewer ports
         self.ortho_view_layout = QtWidgets.QGridLayout()
+
         # Remove the space between the viewers
         self.ortho_view_layout.setSpacing(0)
         self.ortho_view_layout.setContentsMargins(0, 0, 0, 0)
-        # Add the layout to the main layout
+
+        # Add the layout to the main layout of the app
         self.main_layout.addLayout(self.ortho_view_layout)
 
         # Adding 3 PyQtGraph ViewBoxes, ImageViews
         self.axial_view = ViewBox()
+        self.axial_view.setObjectName("axial_view")
         self.sagittal_view = ViewBox()
+        self.sagittal_view.setObjectName("sagittal_view")
         self.coronal_view = ViewBox()
+        self.coronal_view.setObjectName("coronal_view")
 
-        self.remove_views_links()
+        self.remove_global_views_link()
 
         self.axial_viewer = ImageView(self.centralwidget, view=self.axial_view)
         self.sagittal_viewer = ImageView(self.centralwidget, view=self.sagittal_view)
@@ -70,7 +75,16 @@ class MainWindowUI(object):
         self.setup_image_viewer(self.sagittal_viewer)
         self.setup_image_viewer(self.coronal_viewer)
 
-    def remove_views_links(self):
+    def remove_global_views_link(self):
+        # Disable aspect ratio locking for all views
+        self.axial_view.setAspectLocked(False)
+        self.sagittal_view.setAspectLocked(False)
+        self.coronal_view.setAspectLocked(False)
+        # Unregister the global views
+        self.axial_view.unregister()
+        self.sagittal_view.unregister()
+        self.coronal_view.unregister()
+        # Remove the global view links
         self.axial_view.linkView(ViewBox.XAxis, None)
         self.axial_view.linkView(ViewBox.YAxis, None)
         self.sagittal_view.linkView(ViewBox.XAxis, None)
@@ -84,10 +98,10 @@ class MainWindowUI(object):
 
         :param viewer: Instance of pyqtgraph.ImageView to configure.
         """
-        # viewer.ui.histogram.hide()  # Hide histogram for simplicity (optional)
-        viewer.ui.roiBtn.hide()  # Hide ROI button
-        viewer.ui.menuBtn.hide()  # Hide menu button
-        # viewer.getView().setAspectLocked(True)  # Lock aspect ratio
+        # viewer.ui.histogram.hide()
+        viewer.ui.roiBtn.hide()
+        viewer.ui.menuBtn.hide()
+        # viewer.getView().setAspectLocked(True)
 
     def setup_tools(self):
         # Main tools layout (already exists)
@@ -192,13 +206,6 @@ class MainWindowUI(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.overlay_toolbar)
 
         # Add widgets to the Overlay Toolbar
-        self.opacity_label = QtWidgets.QLabel("Opacity")
-        self.opacity_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.opacity_slider.setRange(0, 100)
-        self.opacity_slider.setValue(50)  # Default value
-        self.overlay_toolbar.addWidget(self.opacity_label)
-        self.overlay_toolbar.addWidget(self.opacity_slider)
-
         self.brightness_label = QtWidgets.QLabel("Brightness")
         self.brightness_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.brightness_slider.setRange(-50, 50)
@@ -280,6 +287,7 @@ class MainWindowUI(object):
         #### View Menu Actions ####
         self.actionRuler = QtWidgets.QAction(MainWindow)
         self.actionRuler.setObjectName("actionRuler")
+        self.actionRuler.setCheckable(True)
         self.menuView.addAction(self.actionRuler)
         self.showRuler = QtWidgets.QAction(MainWindow)
         self.showRuler.setObjectName("showRuler")
@@ -287,6 +295,7 @@ class MainWindowUI(object):
         self.menuView.addAction(self.showRuler)
         self.actionAngle = QtWidgets.QAction(MainWindow)
         self.actionAngle.setObjectName("actionAngle")
+        self.actionAngle.setCheckable(True)
         self.menuView.addAction(self.actionAngle)
         self.showAngle = QtWidgets.QAction(MainWindow)
         self.showAngle.setObjectName("showAngle")
@@ -299,18 +308,24 @@ class MainWindowUI(object):
         self.menubar.addAction(self.menuAnnotations.menuAction())
 
         #### Annotation Menu Actions ####
-        self.actionAdd_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionAdd_Text_Annotation = QtWidgets.QAction(
+            MainWindow
+        )  # Added action for text annotation
         self.actionAdd_Text_Annotation.setObjectName("actionAdd_Text_Annotation")
         self.menuAnnotations.addAction(self.actionAdd_Text_Annotation)
         self.actionClear_Annotations = QtWidgets.QAction(MainWindow)  # Added action for text annotation
         self.actionClear_Annotations.setObjectName("actionClear_Annotations")
         self.menuAnnotations.addAction(self.actionClear_Annotations)
 
-        self.actionSave_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionSave_Text_Annotation = QtWidgets.QAction(
+            MainWindow
+        )  # Added action for text annotation
         self.actionSave_Text_Annotation.setObjectName("actionSave_Text_Annotation")
         self.menuAnnotations.addAction(self.actionSave_Text_Annotation)
 
-        self.actionLoad_Text_Annotation = QtWidgets.QAction(MainWindow)  # Added action for text annotation
+        self.actionLoad_Text_Annotation = QtWidgets.QAction(
+            MainWindow
+        )  # Added action for text annotation
         self.actionLoad_Text_Annotation.setObjectName("actionLoad_Text_Annotation")
         self.menuAnnotations.addAction(self.actionLoad_Text_Annotation)
 

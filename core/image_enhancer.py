@@ -1,34 +1,32 @@
 import cv2
 import numpy as np
-from scipy.ndimage import convolve, gaussian_filter
+from scipy.ndimage import convolve, gaussian_filter, median_filter
+from skimage.restoration import denoise_bilateral
 
 
 class ImageEnhancer:
     @staticmethod
-    @staticmethod
-    def apply_window(volume, window_level=None, window_width=None):
-        # Apply windowing to a 3D volume
-        def window_slice(slice_image):
-            min_val = np.min(slice_image)
-            max_val = np.max(slice_image)
-            window_level_ = (
-                window_level if window_level is not None else (min_val + max_val) / 2
-            )
-            window_width_ = (
-                window_width if window_width is not None else (max_val - min_val)
-            )
+    def apply_window(image, window_level=None, window_width=None):
+        min_val = np.min(image)
+        max_val = np.max(image)
 
-            lower_bound = window_level_ - window_width_ / 2
-            upper_bound = window_level_ + window_width_ / 2
+        # If window_level and window_width are not provided, use dynamic values
+        if window_level is None:
+            window_level = (min_val + max_val) / 2  # Center of the intensity range
+        if window_width is None:
+            window_width = max_val - min_val  # Full range of the intensities
 
-            slice_image = np.clip(slice_image, lower_bound, upper_bound)
-            return (slice_image - lower_bound) / (upper_bound - lower_bound)
+        # Calculate the windowing bounds
+        lower_bound = window_level - window_width / 2
+        upper_bound = window_level + window_width / 2
 
-        # Apply windowing to each slice along the first axis
-        windowed_volume = np.stack(
-            [window_slice(volume[i]) for i in range(volume.shape[0])]
-        )
-        return windowed_volume
+        # Clip the image to the windowing range
+        windowed_image = np.clip(image, lower_bound, upper_bound)
+
+        # Normalize the image to the range [0, 1] for display purposes
+        windowed_image = (windowed_image - lower_bound) / (upper_bound - lower_bound)
+
+        return windowed_image
 
     @staticmethod
     def smooth_image(image, sigma=1, strength=1.0):
@@ -51,7 +49,7 @@ class ImageEnhancer:
         return sharpened_image
 
     @staticmethod
-    def reduce_noise(image, filter_type, size=3, sigma_color=0.05, sigma_spatial=15):
+    def denoise(image, filter_type, parameters):
         """
         Parameters:
             image (numpy.ndarray): 3D image array.
@@ -63,17 +61,12 @@ class ImageEnhancer:
         filtered_image = image.copy()
 
         if filter_type == "Median":
-            from scipy.ndimage import median_filter
-
-            filtered_image = median_filter(filtered_image, size=size)
+            filtered_image = median_filter(filtered_image, size=parameters[0])
         elif filter_type == "Bilateral":
-            from skimage.restoration import denoise_bilateral
-
             filtered_image = denoise_bilateral(
                 filtered_image,
-                sigma_color=sigma_color,
-                sigma_spatial=sigma_spatial,
-                multichannel=False,  # Assuming the image is grayscale or single-channel
+                sigma_color=parameters[0],
+                sigma_spatial=parameters[1],
             )
         else:
             raise ValueError(f"Unknown filter type: {filter_type}")

@@ -1,16 +1,16 @@
 import webbrowser
 
 import numpy as np
-from PyQt5.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox, QInputDialog
 import pyqtgraph as pg
+from PyQt5.QtWidgets import QDialog, QFileDialog, QInputDialog, QMainWindow, QMessageBox
 from pyqtgraph import ImageView, InfiniteLine, ViewBox
 
 from core.comparison_renderer import ComparisonRenderer
 from core.image_enhancer import ImageEnhancer
 from core.image_loader import ImageLoader
 from core.image_processor import ImageProcessor
+from core.measurements_annotations import AnnotationTool, MeasurementTools
 from core.volume_renderer import VolumeRenderer
-from core.measurements_annotations import MeasurementTools, AnnotationTool
 from ui.denoising_dialog import DenoisingDialogUI
 from ui.main_window import MainWindowUI
 from ui.smoothing_sharpening_dialog import SmoothingAndSharpeningDialogUI
@@ -24,44 +24,43 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui = MainWindowUI()
         self.ui.setupUi(self)
 
-        # Initialize components
-        self._active_viewer = None
-        self.loaded_image_data = None
-        self.spacing_info = None
-        self.image_loader = ImageLoader()
-        self.image_processor = ImageProcessor()
-        
-        self.viewers = {
-            "axial": self.ui.axial_viewer,
-            "sagittal": self.ui.sagittal_viewer,
-            "coronal": self.ui.coronal_viewer,
-        }
+        # Image Data
+        self.original_image_3d = None
+        self.original_spacing_info = None
+        self.windowed_image = None
+        self.smoothed_image = None
+        self.sharpened_image = None
+        self.denoised_image = None
+
+        # Viewers and Views
+        self.crosshairs = {}
         self.views = {
             "axial": self.ui.axial_view,
             "sagittal": self.ui.sagittal_view,
             "coronal": self.ui.coronal_view,
         }
+        self.viewers = {
+            "axial": self.ui.axial_viewer,
+            "sagittal": self.ui.sagittal_viewer,
+            "coronal": self.ui.coronal_viewer,
+        }
 
-        # Measurement and Annotation Tools
-        self.measurement_tools = MeasurementTools(self)
-        self.annotation_tool = AnnotationTool(self)
-
-        # UI Variables
-        self.crosshairs = {}
-        self.current_active_measurement = None
-
-        # File history management
+        # Critical Components:
+        # Objects for processing images and saving loading history
+        self.image_processor = ImageProcessor()
         self.file_history_manager = FileHistoryManager(
             self.ui.menuFile, self.import_image
         )
 
-        # Connect UI actions
-        self.init_ui_connections()
+        # For Measurement and Annotation Tools
+        self._active_viewer = None
+        self.measurement_tools = MeasurementTools(self)
+        self.annotation_tool = AnnotationTool(self)
+        self.current_active_measurement = None
 
-        # Setup crosshairs
+        # Calling Setup Methods
+        self.init_ui_connections()
         self.setup_crosshairs()
-        
-        # Setup mouse tracking and focus events
         self.setup_viewer_tracking()
 
     def init_ui_connections(self):
@@ -78,7 +77,11 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         )
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
 
-        # Image Menu
+        # View Menu: Measurement Tools
+        self.ui.actionRuler.triggered.connect(self.start_ruler_measurement)
+        self.ui.actionAngle.triggered.connect(self.start_angle_measurement)
+
+        # Image Menu: Image Adjustments and 3D Features
         self.ui.actionWindowing.triggered.connect(self.windowing)
         self.ui.actionSmoothing.triggered.connect(
             lambda: self.smoothing_and_sharpening("Smoothing")
@@ -112,14 +115,18 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui.actionLoad_Text_Annotation.triggered.connect(self.load_text_annotation)
         self.ui.actionClear_Annotations.triggered.connect(self.clear_annotations)
 
+
+        # Help Menu: Documentation
+        self.ui.actionDocumentation.triggered.connect(self.open_docs)
+
     def setup_viewer_tracking(self):
         """
         Setup mouse tracking and focus events for viewers.
         """
         viewers = [
-            self.ui.axial_viewer, 
-            self.ui.sagittal_viewer, 
-            self.ui.coronal_viewer
+            self.ui.axial_viewer,
+            self.ui.sagittal_viewer,
+            self.ui.coronal_viewer,
         ]
 
         for viewer in viewers:
@@ -142,13 +149,13 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         # Deselect previous viewer
         if self._active_viewer:
             self._active_viewer.getView().setBorder(None)
-        
+
         # Set new active viewer
         self._active_viewer = viewer
-        
+
         # Optionally highlight the active viewer
-        viewer.getView().setBorder(pg.mkPen(color='green', width=2))
-        
+        viewer.getView().setBorder(pg.mkPen(color="green", width=5))
+
         return viewer
 
     def get_active_viewer(self):
@@ -164,7 +171,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         """
         active_viewer = self.get_active_viewer()
         if active_viewer:
-            self.current_active_measurement = self.measurement_tools.create_ruler(active_viewer)
+            self.current_active_measurement = self.measurement_tools.create_ruler(
+                active_viewer
+            )
 
     def start_angle_measurement(self):
         """
@@ -172,7 +181,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         """
         active_viewer = self.get_active_viewer()
         if active_viewer:
-            self.current_active_measurement = self.measurement_tools.create_angle_measurement(active_viewer)
+            self.current_active_measurement = (
+                self.measurement_tools.create_angle_measurement(active_viewer)
+            )
 
     def add_text_annotation(self):
         """Add a text annotation to the current active viewer."""
@@ -194,95 +205,182 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         if active_viewer:
             self.annotation_tool.clear_annotations(active_viewer)
 
-
-    def import_image(self, image_type, file_path=None):
+    ## File Menu ##
+    ##===========##
+    def import_image(self, image_type, path=None):
         try:
             if image_type == None:
-                file_path = file_path or self.get_path(
+                path = path or self.get_path(
                     "All Files (*);;NIfTI Files (*.nii *.nii.gz);;DICOM Files (*.dcm)"
                 )
-                if not file_path:
+                if not path:
                     return
 
-                self.loaded_image_data, self.spacing_info = (
-                    self.image_loader.load_image(file_path)
+                self.original_image_3d, self.original_spacing_info = (
+                    ImageLoader.load_image(path)
                 )
-
-                print(
-                    self.loaded_image_data.shape,
-                    self.spacing_info,
-                )
-
-                # Initialize image processor with loaded data
-                self.image_processor.set_image_data(self.loaded_image_data)
-
-                # Add to file history
-                self.file_history_manager.add_to_history(file_path, image_type)
-
-                # Display views
-                self.display_views()
 
             elif image_type == "nii":
-                file_path = file_path or self.get_path("NIfTI Files (*.nii *.nii.gz)")
-                if not file_path:
+                path = path or self.get_path("NIfTI Files (*.nii *.nii.gz)")
+                if not path:
                     return
 
-                self.loaded_image_data, self.spacing_info = (
-                    self.image_loader.load_nifti(file_path)
+                self.original_image_3d, self.original_spacing_info = (
+                    ImageLoader.load_nifti(path)
                 )
-
-                # Initialize image processor with loaded data
-                self.image_processor.set_image_data(self.loaded_image_data)
-
-                # Add to file history
-                self.file_history_manager.add_to_history(file_path, image_type)
-
-                # Display views
-                self.display_views()
 
             elif image_type == "series":
-                directory = file_path or QFileDialog.getExistingDirectory(
+                path = path or QFileDialog.getExistingDirectory(
                     self, "Select DICOM Directory"
                 )
-                if not directory:
+                if not path:
                     return
 
-                self.loaded_image_data, self.spacing_info = (
-                    self.image_loader.load_dicom_series(directory)
+                self.original_image_3d, self.original_spacing_info = (
+                    ImageLoader.load_dicom_series(path)
                 )
 
-                # Initialize image processor with loaded data
-                self.image_processor.set_image_data(self.loaded_image_data)
-
-                # Add to file history
-                self.file_history_manager.add_to_history(directory, image_type)
-
-                # Display views
-                self.display_views()
+            self.set_initial_slices(self.original_image_3d)
+            self.append_image_to_history(path, image_type)
+            self.display_views(self.original_image_3d)
 
         except Exception as e:
             self.show_error_message(str(e))
 
-    def get_path(self, file_type):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Image File", "", file_type
-        )
-        return file_path
+    def exit_app(self):
+        self.close()
 
+    ## Image Menu ##
+    ##============##
+    # Windowing
+    def windowing(self):
+        window_level, window_width = self.show_windowing_dialog()
+
+        # Check if valid values were returned
+        if window_level is not None and window_width is not None:
+            self.windowed_image = ImageEnhancer.apply_window(
+                self.original_image_3d, window_level, window_width
+            )
+            self.display_views(self.windowed_image)
+
+    def show_windowing_dialog(self):
+        windowing_dialog = WindowingDialogUI(self)
+        if windowing_dialog.exec_():
+            window_level, window_width = windowing_dialog.get_parameters()
+            return window_level, window_width
+        return None, None  # Return None if dialog is rejected
+
+    # Smoothing and Sharpening
+    def smoothing_and_sharpening(self, mode):
+        if mode == "Smoothing":
+            sigma, strength = self.show_smoothing_dialog()
+
+            if sigma is not None and strength is not None:
+                self.smoothed_image = ImageEnhancer.smooth_image(
+                    self.original_image_3d, sigma, strength
+                )
+
+                self.display_views(self.smoothed_image)
+
+        elif mode == "Sharpening":
+            strength = self.show_sharpening_dialog()
+
+            if strength is not None:
+                self.sharpened_image = ImageEnhancer.sharpen_image(
+                    self.original_image_3d, strength
+                )
+
+                self.display_views(self.sharpened_image)
+
+    def show_smoothing_dialog(self):
+        smoothing_dialog = SmoothingAndSharpeningDialogUI(mode="Smoothing", parent=self)
+        if smoothing_dialog.exec_():
+            sigma, smoothing_strength = smoothing_dialog.get_parameters("Smoothing")
+            return sigma, smoothing_strength
+        return None, None
+
+    def show_sharpening_dialog(self):
+        sharpening_dialog = SmoothingAndSharpeningDialogUI(
+            mode="Sharpening", parent=self
+        )
+        if sharpening_dialog.exec_() == QDialog.accepted:
+            sharpening_strength = sharpening_dialog.get_parameters("Sharpening")
+            return sharpening_strength
+        return None
+
+    # Denoising
+    def denoising(self):
+        filter_type, parameters = self.show_denoising_dialog()
+
+        if filter_type is not None and parameters is not None:
+            self.denoised_image = ImageEnhancer.denoise(
+                self.original_image_3d, filter_type, parameters
+            )
+
+            self.display_views(self.denoised_image)
+
+    def show_denoising_dialog(self):
+        denoising_dialog = DenoisingDialogUI(self)
+
+        if denoising_dialog.exec_():
+            filter_type, parameters = denoising_dialog.get_parameters()
+            return filter_type, parameters
+        return None
+
+    # 3D Features
+    def build_surface(self):
+        self.volume_renderer = VolumeRenderer()
+        render_window, render_ineractor, _ = (
+            self.volume_renderer.create_volume_renderer(
+                self.original_image_3d,
+                self.original_spacing_info,
+            )
+        )
+        render_window.Render()
+        render_ineractor.Start()
+
+    def comparison_mode(self):
+        data_1_path = self.get_path("NIfTI Files (*.nii *.nii.gz)")
+        data_2_path = self.get_path("NIfTI Files (*.nii *.nii.gz)")
+
+        if not data_1_path or not data_2_path:
+            return
+
+        data_1, spacing_1 = ImageLoader.load_nifti(data_1_path)
+        data_2, spacing_2 = ImageLoader.load_nifti(data_2_path)
+
+        self.comparison_renderer = ComparisonRenderer()
+        render_window, render_interactor = (
+            self.comparison_renderer.create_comparison_mode_renderer(
+                data_1, data_2, spacing_1, spacing_2
+            )
+        )
+
+        render_window.Render()
+        render_interactor.Start()
+
+    ## Help Menu ##
+    ##===========##
+    def open_docs(self):
+        webbrowser.open(
+            "https://github.com/hagersamir/DICOM-Viewer-Features/blob/main/README.md"
+        )
+
+    ## Viewer Feature ##
+    ##================##
     def render_slice(self, image_view: ImageView, slice_data):
         rotated_slice = np.rot90(slice_data, k=2)
-        width, height = rotated_slice.shape
 
         image_view.setImage(
             rotated_slice.T,
             autoRange=True,
             autoLevels=True,
             autoHistogramRange=True,
-            pos=[-width / 2, -height / 2],  # This centers the image
         )
 
-    def display_views(self):
-        if self.loaded_image_data is None:
+    def display_views(self, image_data):
+        if image_data is None:
+            self.show_error_message("No image data to display.")
             return
 
         for plane, viewer in self.viewers.items():
@@ -299,44 +397,20 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 padding=0,
             )
 
+            if width > height:
+                target = width
+            else:
+                target = height
+
             viewer.getView().setLimits(
-                xMin=-width / 2,
-                xMax=width / 2,
-                yMin=-height / 2,
-                yMax=height / 2,
+                xMin=0,
+                xMax=target,
+                yMin=0,
+                yMax=target,
             )
 
-    def build_surface(self):
-        self.volume_renderer = VolumeRenderer()
-        render_window, render_ineractor, _ = (
-            self.volume_renderer.create_volume_renderer(
-                self.loaded_image_data,
-                self.spacing_info,
-            )
-        )
-        render_window.Render()
-        render_ineractor.Start()
-
-    def comparison_mode(self):
-        data_1_path = self.get_path("NIfTI Files (*.nii *.nii.gz)")
-        data_2_path = self.get_path("NIfTI Files (*.nii *.nii.gz)")
-
-        if not data_1_path or not data_2_path:
-            return
-
-        data_1, spacing_1 = self.image_loader.load_nifti(data_1_path)
-        data_2, spacing_2 = self.image_loader.load_nifti(data_2_path)
-
-        self.comparison_renderer = ComparisonRenderer()
-        render_window, render_interactor = (
-            self.comparison_renderer.create_comparison_mode_renderer(
-                data_1, data_2, spacing_1, spacing_2
-            )
-        )
-
-        render_window.Render()
-        render_interactor.Start()
-
+    ## MPR Feature ##
+    ##=============##
     def setup_crosshairs(self):
         views = {
             "axial": self.ui.axial_viewer.getView(),
@@ -375,15 +449,26 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         h_line.setPos(y_center)
         v_line.setPos(x_center)
 
+    ## Utils ##
+    ##=======##
+    def get_path(self, file_type):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open Image File", "", file_type
+        )
+        return file_path
+
+    def set_initial_slices(self, image_data):
+        self.image_processor.set_image_data(image_data=image_data)
+
+    def append_image_to_history(self, image_path, image_format):
+        self.file_history_manager.add_to_history(image_path, image_format)
+
     def show_error_message(self, message):
         msg = QMessageBox()
         msg.setWindowTitle("Error")
         msg.setText(message)
         msg.setIcon(QMessageBox.Critical)
         msg.exec_()
-
-    def exit_app(self):
-        self.close()
 
     def closeEvent(self, event):
         for viewer in [
@@ -394,74 +479,3 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             viewer.close()
         # Explicitly accept the close event (optional)
         event.accept()
-
-    def open_docs(self):
-        webbrowser.open(
-            "https://github.com/hagersamir/DICOM-Viewer-Features/blob/main/README.md"
-        )
-
-    def windowing(self):
-        self.image_enhancer = ImageEnhancer()
-        window_level, window_width = self.get_windowing_parameters()
-
-        # Check if valid values were returned
-        if window_level is not None and window_width is not None:
-            self.loaded_image_data = self.image_enhancer.apply_window(
-                self.loaded_image_data, window_level, window_width
-            )
-            self.display_views()
-
-    def get_windowing_parameters(self):
-        windowing_dialog = WindowingDialogUI()
-        if windowing_dialog.exec_() == QDialog.accepted:
-            window_level = windowing_dialog.windowLevelDoubleSpinBox.value()
-            window_width = windowing_dialog.windowWidthDoubleSpinBox.value()
-            return window_level, window_width
-        return None, None  # Return None if dialog is rejected
-
-    def smoothing_and_sharpening(self, mode):
-        self.image_enhancer = ImageEnhancer()
-        if mode == "Smoothing":
-            sigma, strength = self.get_smoothing_parameters()
-
-            if sigma is not None and strength is not None:
-                self.loaded_image_data = self.image_enhancer.smooth_image(
-                    self.loaded_image_data, sigma, strength
-                )
-                self.display_views()
-
-        elif mode == "Sharpening":
-            strength = self.get_sharpening_parameters()
-            if strength is not None:
-                self.loaded_image_data = self.image_enhancer.sharpen_image(
-                    self.loaded_image_data, strength
-                )
-                self.display_views()
-
-    def get_smoothing_parameters(self):
-        smoothing_dialog = SmoothingAndSharpeningDialogUI(mode="Smoothing")
-        if smoothing_dialog.exec_() == QDialog.accepted:
-            sigma = smoothing_dialog.sigma_spinbox.value()
-            smoothing_strength = smoothing_dialog.smoothing_strength_spinbox.value()
-            return sigma, smoothing_strength
-        return None, None
-
-    def get_sharpening_parameters(self):
-        sharpening_dialog = SmoothingAndSharpeningDialogUI(mode="Sharpening")
-        if sharpening_dialog.exec_() == QDialog.accepted:
-            sharpening_strength = sharpening_dialog.smoothing_strength_spinbox.value()
-            return sharpening_strength
-        return None
-
-    def denoising(self):
-        self.image_enhancer = ImageEnhancer()
-        self.show_denoising_parameters_dialog()
-
-    def show_denoising_parameters_dialog(self):
-        denoising_dialog = DenoisingDialogUI()
-
-        if denoising_dialog.exec_() == QDialog.Accepted:
-            pass
-
-    def show_denoising_parameters(self):
-        pass

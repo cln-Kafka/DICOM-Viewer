@@ -1,7 +1,5 @@
 import os
 
-import nibabel as nib
-import numpy as np
 import SimpleITK as sitk
 
 
@@ -9,7 +7,10 @@ class ImageLoader:
     @staticmethod
     def load_image(file_path):
         try:
-            ext = os.path.splitext(file_path)[-1].lower()
+            if file_path.lower().endswith(".nii.gz"):
+                ext = ".nii.gz"
+            else:
+                ext = os.path.splitext(file_path)[-1].lower()
 
             if ext in [".nii", ".nii.gz"]:
                 return ImageLoader.load_nifti(file_path)
