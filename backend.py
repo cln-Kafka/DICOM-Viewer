@@ -27,6 +27,16 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.spacing_info = None
         self.image_loader = ImageLoader()
         self.image_processor = ImageProcessor()
+        self.viewers = {
+            "axial": self.ui.axial_viewer,
+            "sagittal": self.ui.sagittal_viewer,
+            "coronal": self.ui.coronal_viewer,
+        }
+        self.views = {
+            "axial": self.ui.axial_view,
+            "sagittal": self.ui.sagittal_view,
+            "coronal": self.ui.coronal_view,
+        }
 
         # UI Variables
         self.crosshairs = {}
@@ -83,8 +93,14 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 )
                 if not file_path:
                     return
+
                 self.loaded_image_data, self.spacing_info = (
                     self.image_loader.load_image(file_path)
+                )
+
+                print(
+                    self.loaded_image_data.shape,
+                    self.spacing_info,
                 )
 
                 # Initialize image processor with loaded data
@@ -144,55 +160,40 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         return file_path
 
     def render_slice(self, image_view: ImageView, slice_data):
-        """
-        Renders a 2D slice in the given PyQtGraph ImageView.
-        """
-        # Rotate the image 90 degrees counterclockwise (to the left)
-        rotated_slice = np.rot90(slice_data, k=-1)
+        rotated_slice = np.rot90(slice_data, k=2)
+        width, height = rotated_slice.shape
 
         image_view.setImage(
-            rotated_slice,
+            rotated_slice.T,
             autoRange=True,
             autoLevels=True,
-            autoHistogramRange=False,
+            autoHistogramRange=True,
+            pos=[-width / 2, -height / 2],  # This centers the image
         )
 
     def display_views(self):
         if self.loaded_image_data is None:
             return
 
-        views = {
-            "axial": self.ui.axial_viewer,
-            "sagittal": self.ui.sagittal_viewer,
-            "coronal": self.ui.coronal_viewer,
-        }
-
-        for plane, widget in views.items():
+        for plane, viewer in self.viewers.items():
             slice_data = self.image_processor.get_slice(plane)
-            self.render_slice(widget, slice_data)
-
-            # Get width and height of the slice
             width, height = slice_data.shape
 
-            # Calculate the center of the image
-            x_center = width / 2
-            y_center = height / 2
+            # Render the slice in the viewer
+            self.render_slice(viewer, slice_data)
 
-            # Set the X and Y limits for the view
-            widget.getView().setXRange(0, width, padding=0)
-            widget.getView().setYRange(0, height, padding=0)
-            # widget.getView().setLimits(
-            #     xMin=0,
-            #     xMax=width,
-            #     yMin=0,
-            #     yMax=height,
-            # )
-
-            # Center the view on the image
-            widget.getView().setRange(
-                xRange=(x_center - width / 2, x_center + width / 2),
-                yRange=(y_center - height / 2, y_center + height / 2),
+            # Explicitly set independent ranges for each viewer
+            viewer.getView().setRange(
+                xRange=(0, width),
+                yRange=(0, height),
                 padding=0,
+            )
+
+            viewer.getView().setLimits(
+                xMin=-width / 2,
+                xMax=width / 2,
+                yMin=-height / 2,
+                yMax=height / 2,
             )
 
     def ruler(self, viewer: ImageView):

@@ -25,8 +25,8 @@ class SmoothingAndSharpeningDialogUI(QDialog):
         self.setWindowIcon(QIcon("assets/icons/logo.png"))
 
         # Apply the font to the dialog
-        font = QFont("Poppins", 9)
-        self.setFont(font)
+        self.font = QFont("Poppins", 9)
+        self.setFont(self.font)
 
         self.mainLayout = QVBoxLayout(SmoothingSharpeningDialog)
         self.mainLayout.setObjectName("mainLayout")
@@ -58,7 +58,9 @@ class SmoothingAndSharpeningDialogUI(QDialog):
         # Sigma
         self.sigma_layout = QHBoxLayout()
         self.sigma_label = QLabel("Sigma")
+        self.sigma_label.setFont(self.font)
         self.sigma_spinbox = QDoubleSpinBox()
+        self.sigma_spinbox.setFont(self.font)
         self.sigma_spinbox.setMinimum(0.1)
         self.sigma_spinbox.setMaximum(10)
         self.sigma_spinbox.setValue(1)
@@ -70,7 +72,9 @@ class SmoothingAndSharpeningDialogUI(QDialog):
         # Strength
         self.smoothing_strength_layout = QHBoxLayout()
         self.smoothing_strength_label = QLabel("Strength")
+        self.smoothing_strength_label.setFont(self.font)
         self.smoothing_strength_spinbox = QDoubleSpinBox()
+        self.smoothing_strength_spinbox.setFont(self.font)
         self.smoothing_strength_spinbox.setMinimum(0.1)
         self.smoothing_strength_spinbox.setMaximum(3)
         self.smoothing_strength_spinbox.setValue(2)
@@ -83,7 +87,9 @@ class SmoothingAndSharpeningDialogUI(QDialog):
         # Strength
         self.sharpening_strength_layout = QHBoxLayout()
         self.sharpening_strength_label = QLabel("Strength")
+        self.sharpening_strength_label.setFont(self.font)
         self.sharpening_strength_spinbox = QDoubleSpinBox()
+        self.sharpening_strength_spinbox.setFont(self.font)
         self.sharpening_strength_spinbox.setMinimum(0.1)
         self.sharpening_strength_spinbox.setMaximum(3)
         self.sharpening_strength_spinbox.setValue(0.8)

@@ -25,8 +25,8 @@ class DenoisingDialogUI(QDialog):
         self.setWindowIcon(QIcon("assets/icons/logo.png"))
 
         # Apply the font to the dialog
-        font = QFont("Poppins", 9)
-        self.setFont(font)
+        self.font = QFont("Poppins", 9)
+        self.setFont(self.font)
 
         self.mainLayout = QVBoxLayout(DenoisingDialog)
         self.mainLayout.setObjectName("mainLayout")
@@ -81,6 +81,7 @@ class DenoisingDialogUI(QDialog):
         # Median filter parameters
         kernel_layout = QHBoxLayout()
         kernel_label = QLabel("Kernel Size")
+        kernel_label.setFont(self.font)
         kernel_spinbox = QSpinBox()
         kernel_spinbox.setMinimum(1)
         kernel_spinbox.setMaximum(11)
@@ -96,6 +97,7 @@ class DenoisingDialogUI(QDialog):
         # Sigma Color
         sigma_color_layout = QHBoxLayout()
         sigma_color_label = QLabel("Sigma Color")
+        sigma_color_label.setFont(self.font)
         sigma_color_spinbox = QDoubleSpinBox()
         sigma_color_spinbox.setMinimum(0.1)
         sigma_color_spinbox.setMaximum(10)
@@ -106,6 +108,7 @@ class DenoisingDialogUI(QDialog):
         # Sigma Spatial
         sigma_spatial_layout = QHBoxLayout()
         sigma_spatial_label = QLabel("Sigma Spatial")
+        sigma_spatial_label.setFont(self.font)
         sigma_spatial_spinbox = QDoubleSpinBox()
         sigma_spatial_spinbox.setMinimum(1.0)
         sigma_spatial_spinbox.setMaximum(50)

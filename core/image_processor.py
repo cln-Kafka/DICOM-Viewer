@@ -7,8 +7,8 @@ class ImageProcessor:
         self.image_data = image_data
         # Initialize current slices to middle of each axis
         self.current_slices = {
-            "axial": self.image_data.shape[1] // 2,
-            "sagittal": self.image_data.shape[0] // 2,
+            "axial": self.image_data.shape[0] // 2,
+            "sagittal": self.image_data.shape[1] // 2,
             "coronal": self.image_data.shape[2] // 2,
         }
 
@@ -17,16 +17,16 @@ class ImageProcessor:
             return None
 
         if plane == "axial":
-            return self.image_data[:, :, self.current_slices["axial"]]
+            return self.image_data[self.current_slices["axial"], :, :]
         elif plane == "sagittal":
-            return self.image_data[self.current_slices["sagittal"], :, :]
+            return self.image_data[:, :, self.current_slices["sagittal"]]
         elif plane == "coronal":
             return self.image_data[:, self.current_slices["coronal"], :]
 
     def update_slice(self, plane, slice_index):
         max_slices = {
-            "axial": self.image_data.shape[1],
-            "sagittal": self.image_data.shape[0],
+            "axial": self.image_data.shape[0],
+            "sagittal": self.image_data.shape[1],
             "coronal": self.image_data.shape[2],
         }
 

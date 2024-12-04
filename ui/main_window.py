@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pyqtgraph import ImageView
+from pyqtgraph import ImageView, ViewBox
 
 
 class MainWindowUI(object):
@@ -49,31 +49,34 @@ class MainWindowUI(object):
         # Add the layout to the main layout
         self.main_layout.addLayout(self.ortho_view_layout)
 
-        # Adding 3 PyQtGraph ImageViews
-        self.axial_viewer = ImageView(self.centralwidget)
-        self.sagittal_viewer = ImageView(self.centralwidget)
-        self.coronal_viewer = ImageView(self.centralwidget)
+        # Adding 3 PyQtGraph ViewBoxes, ImageViews
+        self.axial_view = ViewBox()
+        self.sagittal_view = ViewBox()
+        self.coronal_view = ViewBox()
+
+        self.remove_views_links()
+
+        self.axial_viewer = ImageView(self.centralwidget, view=self.axial_view)
+        self.sagittal_viewer = ImageView(self.centralwidget, view=self.sagittal_view)
+        self.coronal_viewer = ImageView(self.centralwidget, view=self.coronal_view)
 
         # Place them in the grid layout
         self.ortho_view_layout.addWidget(self.axial_viewer, 0, 0)
         self.ortho_view_layout.addWidget(self.sagittal_viewer, 0, 1)
         self.ortho_view_layout.addWidget(self.coronal_viewer, 0, 2)
 
-        # Sync the viewers
-        # self.sync_viewers()
-
         # Customize initial settings if needed
         self.setup_image_viewer(self.axial_viewer)
         self.setup_image_viewer(self.sagittal_viewer)
         self.setup_image_viewer(self.coronal_viewer)
 
-    def sync_viewers(self):
-        self.axial_viewer.getView().setXLink(self.sagittal_viewer.getView())
-        self.axial_viewer.getView().setYLink(self.coronal_viewer.getView())
-        self.sagittal_viewer.getView().setXLink(self.axial_viewer.getView())
-        self.sagittal_viewer.getView().setYLink(self.coronal_viewer.getView())
-        self.coronal_viewer.getView().setXLink(self.axial_viewer.getView())
-        self.coronal_viewer.getView().setYLink(self.sagittal_viewer.getView())
+    def remove_views_links(self):
+        self.axial_view.linkView(ViewBox.XAxis, None)
+        self.axial_view.linkView(ViewBox.YAxis, None)
+        self.sagittal_view.linkView(ViewBox.XAxis, None)
+        self.sagittal_view.linkView(ViewBox.YAxis, None)
+        self.coronal_view.linkView(ViewBox.XAxis, None)
+        self.coronal_view.linkView(ViewBox.YAxis, None)
 
     def setup_image_viewer(self, viewer: ImageView):
         """
@@ -84,7 +87,7 @@ class MainWindowUI(object):
         # viewer.ui.histogram.hide()  # Hide histogram for simplicity (optional)
         viewer.ui.roiBtn.hide()  # Hide ROI button
         viewer.ui.menuBtn.hide()  # Hide menu button
-        viewer.getView().setAspectLocked(True)  # Lock aspect ratio
+        # viewer.getView().setAspectLocked(True)  # Lock aspect ratio
 
     def setup_tools(self):
         # Main tools layout (already exists)
@@ -218,7 +221,7 @@ class MainWindowUI(object):
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.ortho_toolbar)
 
         # Add widgets to the Ortho Toolbar
-        self.zoom_label = QtWidgets.QLabel("Zoom:")
+        self.zoom_label = QtWidgets.QLabel("Zoom")
         self.zoom_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.zoom_slider.setRange(10, 200)
         self.zoom_slider.setValue(100)
@@ -228,6 +231,13 @@ class MainWindowUI(object):
         # Add buttons for other orthogonal view options
         self.ortho_button = QtWidgets.QPushButton("Reset View")
         self.ortho_toolbar.addWidget(self.ortho_button)
+
+        # Add a horizontal spacer
+        spacer = QtWidgets.QWidget()
+        spacer.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
+        self.ortho_toolbar.addWidget(spacer)
 
     def setup_menu_bar(self, MainWindow: QtWidgets.QMainWindow):
         ## Menubar ##
