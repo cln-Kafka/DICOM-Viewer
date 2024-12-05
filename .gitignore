@@ -4,3 +4,5 @@ ui/__pycache__
 utils/__pycache__
 tempCodeRunnerFile.py
 assets/data/dicom
+assets/prediction
+assets/prediction.rar

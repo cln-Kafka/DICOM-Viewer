@@ -242,6 +242,12 @@ class MainWindowUI(object):
         )
         self.ortho_toolbar.addWidget(spacer)
 
+        # Add a notification button
+        self.notification_button = QtWidgets.QPushButton()
+        self.notification_button.setIcon(QtGui.QIcon("assets/icons/notification.png"))
+        self.notification_button.setIconSize(QtCore.QSize(24, 24))
+        self.ortho_toolbar.addWidget(self.notification_button)
+
     def setup_menu_bar(self, MainWindow: QtWidgets.QMainWindow):
         ## Menubar ##
         self.menubar = QtWidgets.QMenuBar(MainWindow)

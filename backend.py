@@ -2,10 +2,11 @@ import webbrowser
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QDialog, QFileDialog, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QDialog, QFileDialog, QLabel, QMainWindow, QMessageBox
 from pyqtgraph import ImageView, InfiniteLine
 
 from core.annotations_handler import AnnotationTool
+from core.cdss_worker import CDSSWorker
 from core.comparison_renderer import ComparisonRenderer
 from core.image_enhancer import ImageEnhancer
 from core.image_loader import ImageLoader
@@ -14,6 +15,7 @@ from core.measurements_handler import MeasurementTools
 from core.volume_renderer import VolumeRenderer
 from ui.denoising_dialog import DenoisingDialogUI
 from ui.main_window import MainWindowUI
+from ui.notification_list import NotificationListDialog
 from ui.smoothing_sharpening_dialog import SmoothingAndSharpeningDialogUI
 from ui.windowing_parameters_dialog import WindowingDialogUI
 from utils.file_history_manager import FileHistoryManager
@@ -62,6 +64,10 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         # Calling Setup Methods
         self.init_ui_connections()
         self.setup_viewer_tracking()
+
+        # CDSS
+        self.cdss_worker = CDSSWorker("./assets/prediction/best_model_tf.h5")
+        self.cdss_worker.prediction_signal.connect(self.update_cdss_result)
 
     def init_ui_connections(self):
         # File Menu
@@ -170,6 +176,10 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             self.set_initial_slices(self.original_image_3d)
             self.append_image_to_history(path, image_type)
             self.display_views(self.original_image_3d)
+
+            # Start CDSS prediction
+            self.cdss_worker.set_image(self.original_image_3d)  # Pass image to worker
+            self.cdss_worker.start()  # Start prediction in a separate thread
 
         except Exception as e:
             self.show_error_message(str(e))
@@ -514,6 +524,16 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             self.current_active_measurement = (
                 self.measurement_tools.create_angle_measurement(active_viewer)
             )
+
+    ## CDSS ##
+    ##======##
+    def update_cdss_result(self, result):
+        notification_dialog = NotificationListDialog(self)
+        prediction_label = QLabel(result)
+        notification_dialog.notificationList.addItem(prediction_label)
+        self.ui.notification_button.setIcon("./assets/icons/notification_1.png")
+        if notification_dialog.exec_():
+            self.ui.notification_button.setIcon("./assets/icons/notification.png")
 
     ## Utils ##
     ##=======##
