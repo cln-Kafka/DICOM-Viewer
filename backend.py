@@ -4,7 +4,6 @@ import numpy as np
 import pyqtgraph as pg
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
-    QDialog,
     QFileDialog,
     QLabel,
     QListWidgetItem,
@@ -487,56 +486,6 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
             for viewer in self.viewers.values():
                 viewer.scene.sigMouseMoved.disconnect()
-
-    # def update_crosshairs(self, plane, event):
-    #     try:
-    #         # Map mouse position to viewer coordinates
-    #         mouse_point = self.viewers[plane].getView().mapSceneToView(event)
-    #         x = int(mouse_point.x())
-    #         y = int(mouse_point.y())
-
-    #         # Ensure coordinates are within bounds
-    #         x = max(0, min(x, self.original_image_3d.shape[2] - 1))
-    #         y = max(0, min(y, self.original_image_3d.shape[1] - 1))
-
-    #         # Determine z-coordinate based on the current plane
-    #         if plane == "axial":
-    #             z = self.image_processor.current_slices["axial"]
-    #         elif plane == "sagittal":
-    #             z = x
-    #             x = self.image_processor.current_slices["sagittal"]
-    #         elif plane == "coronal":
-    #             z = y
-    #             y = self.image_processor.current_slices["coronal"]
-
-    #         # Update crosshairs
-    #         self.crosshairs[plane]["h_line"].setPos(y)
-    #         self.crosshairs[plane]["v_line"].setPos(x)
-
-    #         # Update slice indices in ImageProcessor
-    #         if plane == "axial":
-    #             self.image_processor.update_slice("sagittal", x)
-    #             self.image_processor.update_slice("coronal", y)
-    #         elif plane == "sagittal":
-    #             self.image_processor.update_slice("axial", y)
-    #             self.image_processor.update_slice("coronal", x)
-    #         elif plane == "coronal":
-    #             self.image_processor.update_slice("axial", y)
-    #             self.image_processor.update_slice("sagittal", x)
-
-    #         # Update coordinate fields
-    #         self.ui.x_value.setText(str(x))
-    #         self.ui.y_value.setText(str(y))
-    #         self.ui.z_value.setText(str(z))
-
-    #         # Get and display the voxel value
-    #         voxel_value = self.original_image_3d[z, y, x]
-    #         self.ui.voxel_value.setText(str(voxel_value))
-
-    #         # Refresh all viewers
-    #         self.refresh_slices()
-    #     except Exception as e:
-    #         self.show_error_message(f"Error updating crosshairs: {str(e)}")
 
     def update_crosshairs(self, plane, event):
         try:
