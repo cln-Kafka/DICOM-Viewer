@@ -132,92 +132,6 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             lambda: self.display_views(self.original_image_3d)
         )
 
-    def setup_viewer_tracking(self):
-        """
-        Setup mouse tracking and focus events for viewers.
-        """
-        viewers = [
-            self.ui.axial_viewer,
-            self.ui.sagittal_viewer,
-            self.ui.coronal_viewer,
-        ]
-
-        for viewer in viewers:
-            # Enable mouse tracking
-            viewer.getView().scene().sigMouseMoved.connect(
-                lambda pos, v=viewer: self.on_viewer_mouse_move(v, pos)
-            )
-
-    def on_viewer_mouse_move(self, viewer, pos):
-        """
-        Handle mouse movement over a viewer.
-        """
-        # Optionally update the active viewer when mouse moves
-        self.set_active_viewer(viewer)
-
-    def set_active_viewer(self, viewer):
-        """
-        Set the currently active viewer.
-        """
-        # Deselect previous viewer
-        if self._active_viewer:
-            self._active_viewer.getView().setBorder(None)
-
-        # Set new active viewer
-        self._active_viewer = viewer
-
-        # Optionally highlight the active viewer
-        viewer.getView().setBorder(pg.mkPen(color="green", width=5))
-
-        return viewer
-
-    def get_active_viewer(self):
-        """
-        Get the currently active viewer.
-        Default to axial viewer if no viewer is active.
-        """
-        return self._active_viewer or self.ui.axial_viewer
-
-    def start_ruler_measurement(self):
-        """
-        Activate ruler measurement tool on the current active viewer.
-        """
-        active_viewer = self.get_active_viewer()
-        if active_viewer:
-            self.current_active_measurement = self.measurement_tools.create_ruler(
-                active_viewer
-            )
-
-    def start_angle_measurement(self):
-        """
-        Activate angle measurement tool on the current active viewer.
-        """
-        active_viewer = self.get_active_viewer()
-        if active_viewer:
-            self.current_active_measurement = (
-                self.measurement_tools.create_angle_measurement(active_viewer)
-            )
-
-    def add_text_annotation(self):
-        """Add a text annotation to the current active viewer."""
-        active_viewer = self.get_active_viewer()
-        if active_viewer:
-            self.annotation_tool.add_text_annotation(active_viewer)
-
-    def save_text_annotation(self):
-        """Save annotations."""
-        self.annotation_tool.save_annotations()
-
-    def load_text_annotation(self):
-        """Load annotations."""
-        self.annotation_tool.load_annotations()
-
-    def clear_annotations(self):
-        """Clear annotations for the current active viewer."""
-        active_viewer = self.get_active_viewer()
-        if active_viewer:
-            self.annotation_tool.clear_annotations(active_viewer)
-
     ## File Menu ##
     ##===========##
     def import_image(self, image_type, path=None):
@@ -382,6 +296,10 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
     ## Ortho Toolbar ##
     ##===============##
     def screenshot(self):
+        if self.original_image_3d is None:
+            self.show_error_message("No image data to capture.")
+            return
+
         for plane, viewer in self.viewers.items():
             viewer.export(fileName=f"screenshot_{plane}.png")
 
@@ -468,6 +386,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
     ## MPR Feature ##
     ##=============##
     def setup_crosshairs(self):
+        if self.original_image_3d is None:
+            return
+
         width, height, _ = self.original_image_3d.shape
 
         for plane, view in self.views.items():
@@ -550,6 +471,50 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         except Exception as e:
             self.show_error_message(f"Error fetching voxel data: {str(e)}")
 
+    ## Annotation Tools ##
+    ##==================##
+    def add_text_annotation(self):
+        """Add a text annotation to the current active viewer."""
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.annotation_tool.add_text_annotation(active_viewer)
+
+    def save_text_annotation(self):
+        """Save annotations."""
+        self.annotation_tool.save_annotations()
+
+    def load_text_annotation(self):
+        """Load annotations."""
+        self.annotation_tool.load_annotations()
+
+    def clear_annotations(self):
+        """Clear annotations for the current active viewer."""
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.annotation_tool.clear_annotations(active_viewer)
+
+    ## Measurement Tools ##
+    ##===================##
+    def start_ruler_measurement(self):
+        """
+        Activate ruler measurement tool on the current active viewer.
+        """
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.current_active_measurement = self.measurement_tools.create_ruler(
+                active_viewer
+            )
+
+    def start_angle_measurement(self):
+        """
+        Activate angle measurement tool on the current active viewer.
+        """
+        active_viewer = self.get_active_viewer()
+        if active_viewer:
+            self.current_active_measurement = (
+                self.measurement_tools.create_angle_measurement(active_viewer)
+            )
+
     ## Utils ##
     ##=======##
     def get_path(self, file_type):
@@ -580,3 +545,43 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             viewer.close()
         # Explicitly accept the close event (optional)
         event.accept()
+
+    def setup_viewer_tracking(self):
+        """
+        Setup mouse tracking and focus events for viewers.
+        """
+        for viewer in self.viewers.values():
+            # Enable mouse tracking
+            viewer.getView().scene().sigMouseMoved.connect(
+                lambda pos, v=viewer: self.on_viewer_mouse_move(v, pos)
+            )
+
+    def on_viewer_mouse_move(self, viewer, pos):
+        """
+        Handle mouse movement over a viewer.
+        """
+        # Optionally update the active viewer when mouse moves
+        self.set_active_viewer(viewer)
+
+    def set_active_viewer(self, viewer):
+        """
+        Set the currently active viewer.
+        """
+        # Deselect previous viewer
+        if self._active_viewer:
+            self._active_viewer.getView().setBorder(None)
+
+        # Set new active viewer
+        self._active_viewer = viewer
+
+        # Optionally highlight the active viewer
+        viewer.getView().setBorder(pg.mkPen(color="green", width=5))
+
+        return viewer
+
+    def get_active_viewer(self):
+        """
+        Get the currently active viewer.
+        Default to axial viewer if no viewer is active.
+        """
+        return self._active_viewer or self.ui.axial_viewer

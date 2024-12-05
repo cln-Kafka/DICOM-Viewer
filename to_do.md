@@ -1,7 +1,13 @@
-- Playing with the `image_processor.py` and the `display_views` and `render_slice` methods to accurately show the range and limits of each view at the start of the app. For this, you can also check the setup methods in the `main_window.py`
+# To Do
 
-- The image enhancement module isn't compatible with the image dimensions it receives. It needs a lot of handling on the input side: specifying what image it gets, 3D? slice? And what does it return?
+| ID | Task | Priority |
+| :-: | :-: | :-: |
+| 1 | Remove the default link of the viewboxes |  |
+| 2 | Set accurate ranges and limits for the views |  |
+| 3 | Image adjustments and enhancements don't work |  |
+| 4 | More clean integration of contrast adjustment for all views |  |
+| 5 | Save screenshots in a selected folder |  |
+| 6 | Error Handling |  |
+| 7 | CDSS Integration |  |
 
-- Linked zooming and contrast adjustment
-
-- The toolbars
+# Done
