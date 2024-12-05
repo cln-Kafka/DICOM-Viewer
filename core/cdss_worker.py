@@ -1,75 +1,71 @@
 import numpy as np
-import pandas as pd
-import tensorflow as tf
+import torch
 from PIL import Image
 from PyQt5.QtCore import QThread, pyqtSignal
-from tensorflow.keras.losses import SparseCategoricalCrossentropy
-from tensorflow.keras.models import load_model
-from tensorflow.keras.optimizers import Adam
+from transformers import AutoImageProcessor, AutoModelForImageClassification
 
 
 class CDSSWorker(QThread):
     prediction_signal = pyqtSignal(str)  # Signal to emit the prediction result
 
-    def __init__(self, model_path, annotations_path):
+    def __init__(self):
         super().__init__()
-        # Load and compile the model
-        self.model = load_model(model_path, compile=False)
-        self.model.compile(
-            optimizer=Adam(), loss=SparseCategoricalCrossentropy(), metrics=["accuracy"]
+        # Load the Hugging Face model and processor
+        self.processor = AutoImageProcessor.from_pretrained(
+            "vishnu027/dental_classification_model_010424_2"
         )
-        self.annotations = pd.read_csv(annotations_path)  # Load annotations
-        self.annotations_dict = dict(
-            zip(self.annotations["filename"], self.annotations["class"])
+        self.model = AutoModelForImageClassification.from_pretrained(
+            "vishnu027/dental_classification_model_010424_2"
         )
-        self.classes = {"Fillings": 0, "Implant": 1, "Impacted Tooth": 2, "Cavity": 3}
-        self.reverse_classes = {v: k for k, v in self.classes.items()}
+        self.slice_data = None  # Placeholder for the 2D slice
 
-        self.image_path = None  # Placeholder for the image path
+    def set_slice(self, slice_data):
+        """Set the 2D slice data for processing."""
+        self.slice_data = slice_data
 
-    def set_image(self, image_path):
-        """Set the image path for processing."""
-        self.image_path = image_path
-
-    def preprocess_image(self, image_path):
+    def preprocess_slice(self, slice_data):
         """
-        Preprocess the image for the model.
-        Resizes, normalizes, and adds a batch dimension.
+        Preprocess the 2D slice for the Hugging Face model.
+        Normalizes the image and converts it to a format suitable for the processor.
         """
-        IMG_SIZE = (256, 256)  # Ensure consistency with training
-        img = Image.open(image_path).convert("RGB")
+        IMG_SIZE = (224, 224)  # Resize for model input consistency
+
+        # Normalize the slice to [0, 255] range
+        normalized_slice = (slice_data - np.min(slice_data)) / (
+            np.max(slice_data) - np.min(slice_data)
+        )
+        normalized_slice = (normalized_slice * 255).astype(np.uint8)
+
+        # Convert to RGB using PIL
+        img = Image.fromarray(normalized_slice).convert("RGB")
+
+        # Resize to model's input size
         img = img.resize(IMG_SIZE)
-        img_array = np.array(img) / 255.0  # Normalize to [0, 1]
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-        return img_array
+
+        # Use the processor to prepare the image
+        inputs = self.processor(img, return_tensors="pt")
+        return inputs
 
     def run(self):
         """Perform predictions and emit results."""
-        if self.image_path is not None:
+        if self.slice_data is not None:
             try:
-                # Extract the image name for annotation lookup
-                image_name = self.image_path.split("\\")[-1]
-                true_label = self.annotations_dict.get(image_name, "Unknown")
+                # Preprocess the 2D slice
+                inputs = self.preprocess_slice(self.slice_data)
 
-                # Preprocess the image
-                img_array = self.preprocess_image(self.image_path)
+                # Perform inference
+                with torch.no_grad():
+                    outputs = self.model(**inputs)
+                    predicted_class_idx = outputs.logits.argmax(-1).item()
 
-                # Make predictions
-                predictions = self.model.predict(img_array)
-                predicted_class = np.argmax(predictions, axis=1)[0]
-                predicted_label = self.reverse_classes[predicted_class]
-
-                # Prepare result message
-                result_message = f"True: {true_label}, Predicted: {predicted_label}"
-                if predicted_label == true_label:
-                    result_message += " (Correct)"
-                else:
-                    result_message += " (Incorrect)"
+                # Get the predicted label
+                predicted_label = self.model.config.id2label[predicted_class_idx]
 
                 # Emit the result
+                result_message = f"Predicted: {predicted_label}"
                 self.prediction_signal.emit(result_message)
 
             except Exception as e:
                 self.prediction_signal.emit(f"Error: {str(e)}")
         else:
-            self.prediction_signal.emit("No image provided for prediction.")
+            self.prediction_signal.emit("No slice data provided for prediction.")

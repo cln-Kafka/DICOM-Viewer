@@ -43,6 +43,7 @@ class ImageLoader:
             dicom_files = reader.GetGDCMSeriesFileNames(directory)
             reader.SetFileNames(dicom_files)
             image = reader.Execute()
+            image = sitk.ReadImage(dicom_files)
             return sitk.GetArrayFromImage(image), image.GetSpacing()
         except Exception as e:
             raise ValueError(f"Failed to load DICOM series: {e}")

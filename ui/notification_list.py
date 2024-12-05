@@ -8,7 +8,7 @@ class NotificationListDialog(QtWidgets.QDialog):
 
     def setupUi(self, NotificationDialog):
         NotificationDialog.setObjectName("NotificationDialog")
-        NotificationDialog.resize(295, 122)
+        NotificationDialog.resize(295, 90)
         self.setWindowIcon(QtGui.QIcon("assets/icons/logo.png"))
         font = QtGui.QFont()
         font.setFamily("Poppins")

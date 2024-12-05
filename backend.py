@@ -2,7 +2,15 @@ import webbrowser
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QDialog, QFileDialog, QLabel, QMainWindow, QMessageBox
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QLabel,
+    QListWidgetItem,
+    QMainWindow,
+    QMessageBox,
+)
 from pyqtgraph import ImageView, InfiniteLine
 
 from core.annotations_handler import AnnotationTool
@@ -66,8 +74,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.setup_viewer_tracking()
 
         # CDSS
-        self.cdss_worker = CDSSWorker("./assets/prediction/best_model_tf.h5")
-        self.cdss_worker.prediction_signal.connect(self.update_cdss_result)
+        self.prediction = None
+        self.cdss_worker = CDSSWorker()
+        self.cdss_worker.prediction_signal.connect(self.get_prediction_label)
 
     def init_ui_connections(self):
         # File Menu
@@ -137,6 +146,9 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         self.ui.reload_button.clicked.connect(
             lambda: self.display_views(self.original_image_3d)
         )
+        self.ui.notification_button.clicked.connect(
+            self.display_prediction_notification
+        )
 
     ## File Menu ##
     ##===========##
@@ -175,11 +187,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
             self.set_initial_slices(self.original_image_3d)
             self.append_image_to_history(path, image_type)
-            self.display_views(self.original_image_3d)
 
-            # Start CDSS prediction
-            self.cdss_worker.set_image(self.original_image_3d)  # Pass image to worker
-            self.cdss_worker.start()  # Start prediction in a separate thread
+            self.display_views(self.original_image_3d)
 
         except Exception as e:
             self.show_error_message(str(e))
@@ -195,6 +204,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Check if valid values were returned
         if window_level is not None and window_width is not None:
+            self.windowed_image = self.original_image_3d.astype(np.float32)
+
             self.windowed_image = ImageEnhancer.apply_window(
                 self.original_image_3d, window_level, window_width
             )
@@ -213,6 +224,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             sigma, strength = self.show_smoothing_dialog()
 
             if sigma is not None and strength is not None:
+                self.smoothed_image = self.original_image_3d.astype(np.float32)
+
                 self.smoothed_image = ImageEnhancer.smooth_image(
                     self.original_image_3d, sigma, strength
                 )
@@ -223,6 +236,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             strength = self.show_sharpening_dialog()
 
             if strength is not None:
+                self.sharpened_image = self.original_image_3d.astype(np.float32)
                 self.sharpened_image = ImageEnhancer.sharpen_image(
                     self.original_image_3d, strength
                 )
@@ -240,7 +254,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         sharpening_dialog = SmoothingAndSharpeningDialogUI(
             mode="Sharpening", parent=self
         )
-        if sharpening_dialog.exec_() == QDialog.accepted:
+        if sharpening_dialog.exec_():
             sharpening_strength = sharpening_dialog.get_parameters("Sharpening")
             return sharpening_strength
         return None
@@ -250,6 +264,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         filter_type, parameters = self.show_denoising_dialog()
 
         if filter_type is not None and parameters is not None:
+            self.denoised_image = self.original_image_3d.astype(np.float32)
+
             self.denoised_image = ImageEnhancer.denoise(
                 self.original_image_3d, filter_type, parameters
             )
@@ -333,6 +349,10 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         for plane, viewer in self.viewers.items():
             slice_data = self.image_processor.get_slice(plane)
             width, height = slice_data.shape
+
+            # Pass the loaded NIfTI image to the CDSS worker
+            self.cdss_worker.set_slice(slice_data)
+            self.cdss_worker.start()
 
             # Render the slice in the viewer
             self.render_slice(viewer, slice_data)
@@ -527,13 +547,27 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
     ## CDSS ##
     ##======##
-    def update_cdss_result(self, result):
+    def get_prediction_label(self, result):
+        self.prediction = result
+        self.ui.notification_button.setIcon(QIcon("./assets/icons/notification_1.png"))
+
+    def display_prediction_notification(self):
         notification_dialog = NotificationListDialog(self)
-        prediction_label = QLabel(result)
-        notification_dialog.notificationList.addItem(prediction_label)
-        self.ui.notification_button.setIcon("./assets/icons/notification_1.png")
+        prediction_label = QLabel(f"The AI companion predicted:\n{self.prediction}")
+
+        # Create a QListWidgetItem and set its size hint
+        list_item = QListWidgetItem()
+        list_item.setSizeHint(
+            prediction_label.sizeHint() * 2
+        )  # Adjust multiplier as needed
+
+        notification_dialog.notificationList.addItem(list_item)
+        notification_dialog.notificationList.setItemWidget(list_item, prediction_label)
+
         if notification_dialog.exec_():
-            self.ui.notification_button.setIcon("./assets/icons/notification.png")
+            self.ui.notification_button.setIcon(
+                QIcon("./assets/icons/notification.png")
+            )
 
     ## Utils ##
     ##=======##
