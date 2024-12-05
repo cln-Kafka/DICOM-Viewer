@@ -228,6 +228,8 @@ class MainWindowUI(object):
         self.tracking_button = QtWidgets.QPushButton()
         self.tracking_button.setIcon(QtGui.QIcon("assets/icons/tracking.png"))
         self.tracking_button.setIconSize(QtCore.QSize(24, 24))
+        self.tracking_button.setCheckable(True)
+        self.tracking_button.setShortcut("Ctrl+X")
         self.ortho_toolbar.addWidget(self.tracking_button)
 
         self.reload_button = QtWidgets.QPushButton()
@@ -271,6 +273,9 @@ class MainWindowUI(object):
         self.actionImport_DICOM_Series = QtWidgets.QAction(MainWindow)
         self.actionImport_DICOM_Series.setObjectName("actionImport_DICOM_Series")
         self.actionQuit_App = QtWidgets.QAction(MainWindow)
+        self.actionImport_png = QtWidgets.QAction(MainWindow)
+        self.actionImport_png.setObjectName("actionImport_png")
+        self.actionImport_png.setShortcut("Ctrl+I")
         self.actionQuit_App.setObjectName("actionQuit_App")
         self.actionQuit_App.setShortcut("Ctrl+Q")
 
@@ -278,6 +283,7 @@ class MainWindowUI(object):
         self.menuFile.addAction(self.actionImport_NIFTI)
         self.menuFile.addAction(self.actionImport_Sample_Image)
         self.menuFile.addAction(self.actionImport_DICOM_Series)
+        self.menuFile.addAction(self.actionImport_png)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit_App)
 
@@ -412,6 +418,7 @@ class MainWindowUI(object):
         self.actionImport_DICOM_Series.setText(
             _translate("MainWindow", "Import DICOM Series")
         )
+        self.actionImport_png.setText(_translate("MainWindow", "Import PNG/JPG"))
         self.actionQuit_App.setText(_translate("MainWindow", "Quit App"))
         self.actionRuler.setText(_translate("MainWindow", "Ruler"))
         self.showRuler.setText(_translate("MainWindow", "Show Ruler"))

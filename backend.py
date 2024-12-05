@@ -65,8 +65,8 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # For Measurement and Annotation Tools
         self._active_viewer = None
-        self.measurement_tools = MeasurementTools(self)
-        self.annotation_tool = AnnotationTool(self)
+        self.measurement_handler = MeasurementTools(self)
+        self.annotation_handler = AnnotationTool(self)
         self.current_active_measurement = None
 
         # Calling Setup Methods
@@ -90,6 +90,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 "nii", "assets/data/nifti/subject-01-flanker.nii.gz"
             )
         )
+        self.ui.actionImport_png.triggered.connect(lambda: self.import_image("png"))
         self.ui.actionQuit_App.triggered.connect(self.exit_app)
 
         # View Menu: Measurement Tools
@@ -117,13 +118,13 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Connect Ruler toggle
         self.ui.showRuler.toggled.connect(
-            lambda checked: self.measurement_tools.toggle_ruler(
+            lambda checked: self.measurement_handler.toggle_ruler(
                 self.get_active_viewer(), checked
             )
         )
         # Connect Angle toggle
         self.ui.showAngle.toggled.connect(
-            lambda checked: self.measurement_tools.toggle_angle(
+            lambda checked: self.measurement_handler.toggle_angle(
                 self.get_active_viewer(), checked
             )
         )
@@ -142,7 +143,7 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Ortho Toolbar
         self.ui.camera_button.clicked.connect(self.screenshot)
-        self.ui.tracking_button.clicked.connect(self.setup_crosshairs)
+        self.ui.tracking_button.toggled.connect(self.setup_crosshairs)
         self.ui.reload_button.clicked.connect(
             lambda: self.display_views(self.original_image_3d)
         )
@@ -185,6 +186,15 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                     ImageLoader.load_dicom_series(path)
                 )
 
+            elif image_type == "png":
+                path = path or self.get_path("PNG Files (*.png)")
+                if not path:
+                    return
+
+                self.original_image_3d, _ = ImageLoader.load_png(path)
+                self.display_image(self.original_image_3d)
+                return
+
             self.set_initial_slices(self.original_image_3d)
             self.append_image_to_history(path, image_type)
 
@@ -204,12 +214,17 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
         # Check if valid values were returned
         if window_level is not None and window_width is not None:
-            self.windowed_image = self.original_image_3d.astype(np.float32)
+            for plane, viewer in self.viewers.items():
+                target_slice = self.image_processor.get_slice(plane)
 
-            self.windowed_image = ImageEnhancer.apply_window(
-                self.original_image_3d, window_level, window_width
-            )
-            self.display_views(self.windowed_image)
+                windowed_image = ImageEnhancer.apply_window(
+                    target_slice,
+                    window_level,
+                    window_width,
+                )
+
+                # Render the slice in the viewer
+                self.render_slice(viewer, windowed_image)
 
     def show_windowing_dialog(self):
         windowing_dialog = WindowingDialogUI(self)
@@ -224,24 +239,27 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             sigma, strength = self.show_smoothing_dialog()
 
             if sigma is not None and strength is not None:
-                self.smoothed_image = self.original_image_3d.astype(np.float32)
+                for plane, viewer in self.viewers.items():
+                    target_slice = self.image_processor.get_slice(plane)
 
-                self.smoothed_image = ImageEnhancer.smooth_image(
-                    self.original_image_3d, sigma, strength
-                )
+                    smoothed_slice = ImageEnhancer.smooth_image(
+                        target_slice, sigma, strength
+                    )
 
-                self.display_views(self.smoothed_image)
+                    # Render the slice in the viewer
+                    self.render_slice(viewer, smoothed_slice)
 
         elif mode == "Sharpening":
             strength = self.show_sharpening_dialog()
 
             if strength is not None:
-                self.sharpened_image = self.original_image_3d.astype(np.float32)
-                self.sharpened_image = ImageEnhancer.sharpen_image(
-                    self.original_image_3d, strength
-                )
+                for plane, viewer in self.viewers.items():
+                    target_slice = self.image_processor.get_slice(plane)
 
-                self.display_views(self.sharpened_image)
+                    sharpend_image = ImageEnhancer.sharpen_image(target_slice, strength)
+
+                    # Render the slice in the viewer
+                    self.render_slice(viewer, sharpend_image)
 
     def show_smoothing_dialog(self):
         smoothing_dialog = SmoothingAndSharpeningDialogUI(mode="Smoothing", parent=self)
@@ -264,13 +282,17 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         filter_type, parameters = self.show_denoising_dialog()
 
         if filter_type is not None and parameters is not None:
-            self.denoised_image = self.original_image_3d.astype(np.float32)
+            for plane, viewer in self.viewers.items():
+                target_slice = self.image_processor.get_slice(plane)
 
-            self.denoised_image = ImageEnhancer.denoise(
-                self.original_image_3d, filter_type, parameters
-            )
+                denoised_image = ImageEnhancer.denoise(
+                    target_slice,
+                    filter_type,
+                    parameters,
+                )
 
-            self.display_views(self.denoised_image)
+                # Render the slice in the viewer
+                self.render_slice(viewer, denoised_image)
 
     def show_denoising_dialog(self):
         denoising_dialog = DenoisingDialogUI(self)
@@ -376,6 +398,27 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
                 yMax=target,
             )
 
+    def display_image(self, image_data):
+        if image_data is None:
+            self.show_error_message("No image data to display.")
+            return
+
+        width, height = image_data.shape
+
+        # Pass the loaded NIfTI image to the CDSS worker
+        self.cdss_worker.set_slice(image_data)
+        self.cdss_worker.start()
+
+        # Render the slice in the viewer
+        self.render_slice(self.ui.sagittal_viewer, image_data)
+
+        # Explicitly set independent ranges for each viewer
+        self.ui.sagittal_viewer.getView().setRange(
+            xRange=(0, width),
+            yRange=(0, width),
+            padding=0,
+        )
+
     def update_contrast(self, value):
         try:
             # Map slider value to a contrast range
@@ -416,22 +459,84 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
     ## MPR Feature ##
     ##=============##
     def setup_crosshairs(self):
-        if self.original_image_3d is None:
-            return
+        if self.ui.tracking_button.isChecked():
+            # Enable crosshairs
+            if self.original_image_3d is None:
+                return
 
-        width, height, _ = self.original_image_3d.shape
+            width, height, _ = self.original_image_3d.shape
 
-        for plane, view in self.views.items():
-            h_line = InfiniteLine(pos=width / 2, angle=0, movable=False, pen="b")
-            v_line = InfiniteLine(pos=height / 2, angle=90, movable=False, pen="b")
-            view.addItem(h_line)
-            view.addItem(v_line)
-            self.crosshairs[plane] = {"h_line": h_line, "v_line": v_line}
+            for plane, view in self.views.items():
+                h_line = InfiniteLine(pos=width / 2, angle=0, movable=False, pen="b")
+                v_line = InfiniteLine(pos=height / 2, angle=90, movable=False, pen="b")
+                view.addItem(h_line)
+                view.addItem(v_line)
+                self.crosshairs[plane] = {"h_line": h_line, "v_line": v_line}
 
-        for plane, viewer in self.viewers.items():
-            viewer.scene.sigMouseMoved.connect(
-                lambda event, p=plane: self.update_crosshairs(p, event)
-            )
+            for plane, viewer in self.viewers.items():
+                viewer.scene.sigMouseMoved.connect(
+                    lambda event, p=plane: self.update_crosshairs(p, event)
+                )
+        else:
+            # Disable crosshairs and reset
+            for plane, view in self.views.items():
+                if plane in self.crosshairs:
+                    view.removeItem(self.crosshairs[plane]["h_line"])
+                    view.removeItem(self.crosshairs[plane]["v_line"])
+            self.crosshairs.clear()
+
+            for viewer in self.viewers.values():
+                viewer.scene.sigMouseMoved.disconnect()
+
+    # def update_crosshairs(self, plane, event):
+    #     try:
+    #         # Map mouse position to viewer coordinates
+    #         mouse_point = self.viewers[plane].getView().mapSceneToView(event)
+    #         x = int(mouse_point.x())
+    #         y = int(mouse_point.y())
+
+    #         # Ensure coordinates are within bounds
+    #         x = max(0, min(x, self.original_image_3d.shape[2] - 1))
+    #         y = max(0, min(y, self.original_image_3d.shape[1] - 1))
+
+    #         # Determine z-coordinate based on the current plane
+    #         if plane == "axial":
+    #             z = self.image_processor.current_slices["axial"]
+    #         elif plane == "sagittal":
+    #             z = x
+    #             x = self.image_processor.current_slices["sagittal"]
+    #         elif plane == "coronal":
+    #             z = y
+    #             y = self.image_processor.current_slices["coronal"]
+
+    #         # Update crosshairs
+    #         self.crosshairs[plane]["h_line"].setPos(y)
+    #         self.crosshairs[plane]["v_line"].setPos(x)
+
+    #         # Update slice indices in ImageProcessor
+    #         if plane == "axial":
+    #             self.image_processor.update_slice("sagittal", x)
+    #             self.image_processor.update_slice("coronal", y)
+    #         elif plane == "sagittal":
+    #             self.image_processor.update_slice("axial", y)
+    #             self.image_processor.update_slice("coronal", x)
+    #         elif plane == "coronal":
+    #             self.image_processor.update_slice("axial", y)
+    #             self.image_processor.update_slice("sagittal", x)
+
+    #         # Update coordinate fields
+    #         self.ui.x_value.setText(str(x))
+    #         self.ui.y_value.setText(str(y))
+    #         self.ui.z_value.setText(str(z))
+
+    #         # Get and display the voxel value
+    #         voxel_value = self.original_image_3d[z, y, x]
+    #         self.ui.voxel_value.setText(str(voxel_value))
+
+    #         # Refresh all viewers
+    #         self.refresh_slices()
+    #     except Exception as e:
+    #         self.show_error_message(f"Error updating crosshairs: {str(e)}")
 
     def update_crosshairs(self, plane, event):
         try:
@@ -444,30 +549,48 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
             x = max(0, min(x, self.original_image_3d.shape[2] - 1))
             y = max(0, min(y, self.original_image_3d.shape[1] - 1))
 
-            # Determine z-coordinate based on the current plane
+            # Determine new slice indices based on the current plane
             if plane == "axial":
                 z = self.image_processor.current_slices["axial"]
-            elif plane == "sagittal":
-                z = x
-                x = self.image_processor.current_slices["sagittal"]
-            elif plane == "coronal":
-                z = y
-                y = self.image_processor.current_slices["coronal"]
-
-            # Update crosshairs
-            self.crosshairs[plane]["h_line"].setPos(y)
-            self.crosshairs[plane]["v_line"].setPos(x)
-
-            # Update slice indices in ImageProcessor
-            if plane == "axial":
                 self.image_processor.update_slice("sagittal", x)
                 self.image_processor.update_slice("coronal", y)
             elif plane == "sagittal":
+                z = x
+                x = self.image_processor.current_slices["sagittal"]
                 self.image_processor.update_slice("axial", y)
                 self.image_processor.update_slice("coronal", x)
             elif plane == "coronal":
+                z = y
+                y = self.image_processor.current_slices["coronal"]
                 self.image_processor.update_slice("axial", y)
                 self.image_processor.update_slice("sagittal", x)
+
+            # Update the axial plane slice explicitly
+            self.image_processor.update_slice("axial", z)
+
+            # Update crosshairs
+            for p, crosshair in self.crosshairs.items():
+                if p == "axial":
+                    crosshair["h_line"].setPos(
+                        self.image_processor.current_slices["coronal"]
+                    )
+                    crosshair["v_line"].setPos(
+                        self.image_processor.current_slices["sagittal"]
+                    )
+                elif p == "sagittal":
+                    crosshair["h_line"].setPos(
+                        self.image_processor.current_slices["axial"]
+                    )
+                    crosshair["v_line"].setPos(
+                        self.image_processor.current_slices["coronal"]
+                    )
+                elif p == "coronal":
+                    crosshair["h_line"].setPos(
+                        self.image_processor.current_slices["axial"]
+                    )
+                    crosshair["v_line"].setPos(
+                        self.image_processor.current_slices["sagittal"]
+                    )
 
             # Update coordinate fields
             self.ui.x_value.setText(str(x))
@@ -507,21 +630,21 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         """Add a text annotation to the current active viewer."""
         active_viewer = self.get_active_viewer()
         if active_viewer:
-            self.annotation_tool.add_text_annotation(active_viewer)
+            self.annotation_handler.add_text_annotation(active_viewer)
 
     def save_text_annotation(self):
         """Save annotations."""
-        self.annotation_tool.save_annotations()
+        self.annotation_handler.save_annotations()
 
     def load_text_annotation(self):
         """Load annotations."""
-        self.annotation_tool.load_annotations()
+        self.annotation_handler.load_annotations()
 
     def clear_annotations(self):
         """Clear annotations for the current active viewer."""
         active_viewer = self.get_active_viewer()
         if active_viewer:
-            self.annotation_tool.clear_annotations(active_viewer)
+            self.annotation_handler.clear_annotations(active_viewer)
 
     ## Measurement Tools ##
     ##===================##
@@ -531,9 +654,13 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         """
         active_viewer = self.get_active_viewer()
         if active_viewer:
-            self.current_active_measurement = self.measurement_tools.create_ruler(
+            self.current_active_measurement = self.measurement_handler.create_ruler(
                 active_viewer
             )
+
+            # Ensure the "Show Ruler" checkbox is checked
+            if not self.ui.showRuler.isChecked():
+                self.ui.showRuler.setChecked(True)
 
     def start_angle_measurement(self):
         """
@@ -542,8 +669,12 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
         active_viewer = self.get_active_viewer()
         if active_viewer:
             self.current_active_measurement = (
-                self.measurement_tools.create_angle_measurement(active_viewer)
+                self.measurement_handler.create_angle_measurement(active_viewer)
             )
+
+            # Ensure the "Show Angle" checkbox is checked
+            if not self.ui.showAngle.isChecked():
+                self.ui.showAngle.setChecked(True)
 
     ## CDSS ##
     ##======##
@@ -571,6 +702,11 @@ class DicomViewerBackend(QMainWindow, MainWindowUI):
 
     ## Utils ##
     ##=======##
+    def reload(self):
+        self.display_views(self.original_image_3d)
+        self.measurement_handler.toggle_ruler(self.get_active_viewer(), False)
+        self.measurement_handler.toggle_angle(self.get_active_viewer(), False)
+
     def get_path(self, file_type):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open Image File", "", file_type

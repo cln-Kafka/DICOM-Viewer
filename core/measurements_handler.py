@@ -16,6 +16,13 @@ class MeasurementTools:
 
     def create_ruler(self, viewer: ImageView):
         """Create a ruler measurement tool."""
+        # Ensure only one ruler per viewer
+        if viewer in self.active_measurements:
+            for measurement in self.active_measurements[viewer]:
+                if isinstance(measurement, RulerROI):
+                    return measurement  # Return the existing ruler
+
+        # Create a new ruler
         ruler_roi = RulerROI(viewer)
         viewer.getView().addItem(ruler_roi)
 
@@ -27,6 +34,13 @@ class MeasurementTools:
 
     def create_angle_measurement(self, viewer: ImageView):
         """Create an angle measurement tool."""
+        # Ensure only one angle tool per viewer
+        if viewer in self.active_measurements:
+            for measurement in self.active_measurements[viewer]:
+                if isinstance(measurement, AngleROI):
+                    return measurement  # Return the existing angle measurement
+
+        # Create a new angle measurement
         angle_roi = AngleROI(viewer)
         viewer.getView().addItem(angle_roi)
 

@@ -34,13 +34,9 @@ class ImageEnhancer:
 
     @staticmethod
     def sharpen_image(image, strength=1.0):
-        # Define the Laplacian kernel (3x3 in 3 channels)
+        # Define the Laplacian kernel (3x3)
         laplacian_kernel = np.array(
-            [
-                [[0, 0, 0], [0, -1, 0], [0, 0, 0]],
-                [[0, -1, 0], [-1, 5 * strength, -1], [0, -1, 0]],
-                [[0, 0, 0], [0, -1, 0], [0, 0, 0]],
-            ]
+            [[0, -1, 0], [-1, 4 * strength + 1, -1], [0, -1, 0]]
         )
 
         # Apply the convolution operation to sharpen the image

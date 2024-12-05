@@ -1,5 +1,6 @@
 import os
 
+import cv2
 import SimpleITK as sitk
 
 
@@ -24,6 +25,9 @@ class ImageLoader:
 
             elif ext == ".dcm" or os.path.isdir(file_path):
                 return ImageLoader.load_dicom_series(file_path)
+
+            elif ext in [".png", ".jpg", ".jpeg"]:
+                return ImageLoader.load_png(file_path)
 
         except Exception as e:
             raise ValueError(f"Unsupported image format: {e}")
@@ -54,3 +58,11 @@ class ImageLoader:
             return ImageLoader.load_nifti(file_path)
         except Exception as e:
             raise ValueError(f"Failed to load sample image: {e}")
+
+    @staticmethod
+    def load_png(file_path):
+        try:
+            image = cv2.imread(file_path, 0)
+            return image, (1.0, 1.0, 1.0)
+        except:
+            raise ValueError("Failed to load PNG file")
