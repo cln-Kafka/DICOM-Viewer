@@ -1,5 +1,11 @@
 # DICOM Viewer
 
+![Showcasing the app UI](README-Assets/app_ui.png)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green.svg)](https://pypi.org/project/PyQt5/)
+
 ## Table of Contents
 - [Description](#description)
 - [Features](#features)
@@ -11,10 +17,49 @@
 
 
 ## Description
+
+DICOM Viewer is a desktop application built using Python and PyQt, designed to streamline the viewing and analysis of medical images. It offers a wide array of features, ranging from basic viewing functionalities to advanced techniques like volume rendering, image processing, multiplanar reconstructions, annotations, and measurements. Also, it incorporates an AI model that functions as a Clinical Decision Support System (CDSS).
+
 ## Features
+
+#### :white_check_mark: Basic Viewer Functionality
+The app offers interactive viewer with tools for zoom, pan, contrast adjustment
+
+#### :white_check_mark: Multiplanar Reconstruction (MPR):
+You can view images in multiple planes (axial, sagittal, coronal).
+
+#### :white_check_mark: Volume Rendering
+3D representations of anatomical structures.
+
+![Volume Rendering showcase](README-Assets/Volume_Renderer.png)
+
+#### :white_check_mark: Image Adjustment and Enhancement
+Features like windowing, sharpening, smoothing, and noise reduction.
+
+#### :white_check_mark: Annotation and Measurement Tools:
+The app offers tools for annotations with saving and loading notes capabilities, measurements (ruler and angle).
+
+![Annotations_and_measurements showcase](README-Assets/Measurements_and_Annotations.png)
+
+#### ✅ Comparison Mode of Different DICOM Images
+Side-by-side viewing of different DICOM images for historical or multi-modality comparisons (e.g., CT vs. MRI).
+
+#### ✅ AI Model that functions as a CDSS
+Empower users by predicting potential medical interventions based on the current image, providing valuable insights to inform clinical decision-making.
+
 ## How to Run It?
-## Toolstack
-## Areas of Improvement
+
+To be able to use our app, you can simply follow these steps:
+1. Install Python3 on your device. You can download it from <a href="https://www.python.org/downloads/">Here</a>.
+2. Install the required packages by the following command.
+```
+pip install -r requirements.txt
+```
+3. Run the file with the name "main.py" located in the root.
+
+> [!CAUTION]
+> If you have Python 12+, the qDarkTheme package won't work. You must comment on out its import in the `main.py` and the line that calls it and sets up the theme.
+
 ## Contributors
 
 Gratitude goes out to all team members for their valuable contributions to this project.
