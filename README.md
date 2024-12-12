@@ -19,7 +19,23 @@
 ## Description
 ## Features
 
+#### Basic Viewer Functionality
+The app offers interactive viewer with tools for zoom, pan, contrast adjustment
 
+#### Multiplanar Reconstruction (MPR):
+You can view images in multiple planes (axial, sagittal, coronal).
+
+#### Volume Rendering
+3D representations of anatomical structures.
+
+#### Image Adjustment and Enhancement
+Features like windowing, sharpening, smoothing, and noise reduction.
+
+#### Annotation and Measurement Tools:
+The app offers tools for annotations with saving and loading notes capabilities, measurements (ruler and angle).
+
+#### Comparison Mode of Different DICOM Images
+Side-by-side viewing of different DICOM images for historical or multi-modality comparisons (e.g., CT vs. MRI).
 
 ## How to Run It?
 
