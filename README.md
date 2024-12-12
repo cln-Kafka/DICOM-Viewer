@@ -17,25 +17,35 @@
 
 
 ## Description
+
+DICOM Viewer is a desktop application built using Python and PyQt, designed to streamline the viewing and analysis of medical images. It offers a wide array of features, ranging from basic viewing functionalities to advanced techniques like volume rendering, image processing, multiplanar reconstructions, annotations, and measurements. Also, it incorporates an AI model that functions as a Clinical Decision Support System (CDSS).
+
 ## Features
 
-#### Basic Viewer Functionality
+#### :white_check_mark: Basic Viewer Functionality
 The app offers interactive viewer with tools for zoom, pan, contrast adjustment
 
-#### Multiplanar Reconstruction (MPR):
+#### :white_check_mark: Multiplanar Reconstruction (MPR):
 You can view images in multiple planes (axial, sagittal, coronal).
 
-#### Volume Rendering
+#### :white_check_mark: Volume Rendering
 3D representations of anatomical structures.
 
-#### Image Adjustment and Enhancement
+![Volume Rendering showcase](README-Assets/Volume_Renderer.png)
+
+#### :white_check_mark: Image Adjustment and Enhancement
 Features like windowing, sharpening, smoothing, and noise reduction.
 
-#### Annotation and Measurement Tools:
+#### :white_check_mark: Annotation and Measurement Tools:
 The app offers tools for annotations with saving and loading notes capabilities, measurements (ruler and angle).
 
-#### Comparison Mode of Different DICOM Images
+![Annotations_and_measurements showcase](README-Assets/Measurements_and_Annotations.png)
+
+#### ✅ Comparison Mode of Different DICOM Images
 Side-by-side viewing of different DICOM images for historical or multi-modality comparisons (e.g., CT vs. MRI).
+
+#### ✅ AI Model that functions as a CDSS
+Empower users by predicting potential medical interventions based on the current image, providing valuable insights to inform clinical decision-making.
 
 ## How to Run It?
 
