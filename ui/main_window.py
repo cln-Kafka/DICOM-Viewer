@@ -212,6 +212,13 @@ class MainWindowUI(object):
         self.overlay_toolbar.addWidget(self.contrast_label)
         self.overlay_toolbar.addWidget(self.contrast_slider)
 
+        # Spacer
+        spacer2 = QtWidgets.QWidget()
+        spacer2.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
+        self.overlay_toolbar.addWidget(spacer2)
+
     def setup_ortho_toolbar(self, MainWindow: QtWidgets.QMainWindow):
         # Ortho Toolbar
         self.ortho_toolbar = QtWidgets.QToolBar("Ortho Toolbar")
