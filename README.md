@@ -1,5 +1,9 @@
 # DICOM Viewer
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyQt5](https://img.shields.io/badge/GUI-PyQt5-green.svg)](https://pypi.org/project/PyQt5/)
+
 ## Table of Contents
 - [Description](#description)
 - [Features](#features)
@@ -12,9 +16,22 @@
 
 ## Description
 ## Features
+
+
+
 ## How to Run It?
-## Toolstack
-## Areas of Improvement
+
+To be able to use our app, you can simply follow these steps:
+1. Install Python3 on your device. You can download it from <a href="https://www.python.org/downloads/">Here</a>.
+2. Install the required packages by the following command.
+```
+pip install -r requirements.txt
+```
+3. Run the file with the name "main.py" located in the root.
+
+> [!CAUTION]
+> If you have Python 12+, the qDarkTheme package won't work. You must comment on out its import in the `main.py` and the line that calls it and sets up the theme.
+
 ## Contributors
 
 Gratitude goes out to all team members for their valuable contributions to this project.
